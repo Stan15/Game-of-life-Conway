@@ -13,26 +13,25 @@ body {
 #gameWindow {
     margin: 40px auto 40px auto;
     border-radius: 0.5em;
-    height: 500px;
-    width: 500px;
+    height: 400px;
+    width: 400px;
     padding: 0;
     box-shadow: inset 0 0 10px #000000;
 }
 
 #gameControls {
     margin: 40px auto 40px auto;
-    height: 100px;
-    width: 550px;
+    height: fit-content;
+    width: fit-content;
     border-radius: 0.5em;
     background-color: #dde1e7;
     box-shadow: -3px -3px 8px #ffffffb2, 3px 3px 6px rgba(94, 104, 121, 0.945);
-    padding: 10px;
+    padding: 20px;
 }
 
-.sliderControl {
-    display: inline-flex;
+#handControls {
     padding: 0px;
-    margin: 5px 10px 5px 10px;
+    margin: 10px;
 }
 
 #gameOfLifeCanvas {
@@ -40,7 +39,6 @@ body {
     padding: 0;
     margin: 0;
 }
-
 
 .inputGroupLeft label {
 }
