@@ -170,12 +170,20 @@ function addPanEventListeners() {
     canvas.addEventListener('mousemove', PanOnMouseMove);
     canvas.addEventListener('mouseup', PanOnMouseUp);
     canvas.addEventListener('mouseout', PanOnMouseUp);
+    canvas.addEventListener('touchstart', PanOnMouseDown);
+    canvas.addEventListener('touchmove', PanOnMouseMove);
+    canvas.addEventListener('touchend', PanOnMouseUp);
+    canvas.addEventListener('touchcancel', PanOnMouseUp);
 }
 function removePanEventListeners() {
     canvas.removeEventListener('mousedown', PanOnMouseDown);
     canvas.removeEventListener('mousemove', PanOnMouseMove);
     canvas.removeEventListener('mouseup', PanOnMouseUp);
     canvas.removeEventListener('mouseout', PanOnMouseUp);
+    canvas.removeEventListener('touchstart', PanOnMouseDown);
+    canvas.removeEventListener('touchmove', PanOnMouseMove);
+    canvas.removeEventListener('touchend', PanOnMouseUp);
+    canvas.removeEventListener('touchcancel', PanOnMouseUp);
     panning = false;
 }
 
@@ -226,12 +234,20 @@ function addPaintEventListeners() {
     canvas.addEventListener('mousemove', PaintOnMouseMove);
     canvas.addEventListener('mouseup', PaintOnMouseUp);
     canvas.addEventListener('mouseout', PaintOnMouseUp);
+    canvas.addEventListener('touchstart', PaintOnMouseDown);
+    canvas.addEventListener('touchmove', PaintOnMouseMove);
+    canvas.addEventListener('touchend', PaintOnMouseUp);
+    canvas.addEventListener('touchcancel', PaintOnMouseUp);
 }
 function removePaintEventListeners() {
     canvas.removeEventListener('mousedown', PaintOnMouseDown);
     canvas.removeEventListener('mousemove', PaintOnMouseMove);
     canvas.removeEventListener('mouseup', PaintOnMouseUp);
     canvas.removeEventListener('mouseout', PaintOnMouseUp);
+    canvas.removeEventListener('touchstart', PaintOnMouseDown);
+    canvas.removeEventListener('touchmove', PaintOnMouseMove);
+    canvas.removeEventListener('touchend', PaintOnMouseUp);
+    canvas.removeEventListener('touchcancel', PaintOnMouseUp);
     painting = false;
 }
 
@@ -285,12 +301,20 @@ function addEraseEventListeners() {
     canvas.addEventListener('mousemove', EraseOnMouseMove);
     canvas.addEventListener('mouseup', EraseOnMouseUp);
     canvas.addEventListener('mouseout', EraseOnMouseUp);
+    canvas.addEventListener('touchstart', EraseOnMouseDown);
+    canvas.addEventListener('touchmove', EraseOnMouseMove);
+    canvas.addEventListener('touchend', EraseOnMouseUp);
+    canvas.addEventListener('touchcancel', EraseOnMouseUp);
 }
 function removeEraseEventListeners() {
     canvas.removeEventListener('mousedown', EraseOnMouseDown);
     canvas.removeEventListener('mousemove', EraseOnMouseMove);
     canvas.removeEventListener('mouseup', EraseOnMouseUp);
     canvas.removeEventListener('mouseout', EraseOnMouseUp);
+    canvas.removeEventListener('touchstart', EraseOnMouseDown);
+    canvas.removeEventListener('touchmove', EraseOnMouseMove);
+    canvas.removeEventListener('touchend', EraseOnMouseUp);
+    canvas.removeEventListener('touchcancel', EraseOnMouseUp);
     erasing = false;
 }
 
