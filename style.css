@@ -24,8 +24,8 @@ body {
 
 #gameControls {
     margin: 2em auto 2em auto;
-    height: 10%;
-    width: 30%;
+    height: 100px;
+    width: 550px;
     border-radius: 0.5em;
     background-color: #dde1e7;
     box-shadow: -3px -3px 8px #ffffffb2, 3px 3px 6px rgba(94, 104, 121, 0.945);
