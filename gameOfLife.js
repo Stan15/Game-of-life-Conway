@@ -3,11 +3,17 @@ let ctx = canvas.getContext('2d');
 
 world_size = [250,250];
 let gameMatrix;
+let colorsMatrix;
 let selectMatrix;
 clearWorld()
 function clearWorld() {
-    gameMatrix = Array.from(Array(world_size[0]), _ => Array(world_size[1]).fill(0));
-    selectMatrix = Array.from(Array(world_size[0]), _ => Array(world_size[1]).fill(0));
+    gameMatrix = Array(world_size[0]).fill(0).map(item =>(new Array(world_size[1]).fill(0)));
+    colorsMatrix = Array(world_size[0]).fill(0).map(item=>(new Array(world_size[1]).fill(0)).map(item=>Array(3).fill(0)));
+    clearSelect();
+}
+
+function clearSelect() {
+    selectMatrix = Array(world_size[0]).fill(0).map(item =>(new Array(world_size[1]).fill(0)));
 }
 
 //--------------------Game Customisation-------------------------------------------------
@@ -16,9 +22,9 @@ let cell_lifespan = 10; //each cell lives only for 10 generations
 
 let gridline_width = 1;
 let cell_size_perc = 0.85; //max is 1. if max, it occupies all of the grid cell it's in
-let select_size;
+let select_size_perc = 0.95;
 
-let cell_color = 'white';
+let paint_color = [255,255,255];
 let bg_color = 'rgb(0,0,0)';
 let gridline_color = '#ffffff10';
 let select_alpha = 0.3;
@@ -36,22 +42,33 @@ let zoom_cap_min = 1;   //zoom in cap when zooming closer than one cell.
 let zoom_cap_max = 400;
 
 //---------------------Game Brains-------------------------------------------------------
-function nextGeneration(currentGen) {
-    let nextGen = JSON.parse(JSON.stringify(currentGen));
+function nextGeneration() {
+    let nextGen = JSON.parse(JSON.stringify(gameMatrix));
+    let nextColorMat = JSON.parse(JSON.stringify(colorsMatrix));
     let ones_zeros = [-1,0,1];
 
-    for (let row=0;row<currentGen.length;row++) {
-        for (let col=0;col<currentGen[0].length;col++) {
+    for (let row=0;row<gameMatrix.length;row++) {
+        for (let col=0;col<gameMatrix[0].length;col++) {
             let neighbor_count = 0;
+            let cell_color = colorsMatrix[row][col];
+
+            cell_color = cell_color.map(x => Math.pow(x,2));
             ones_zeros.forEach(i => {
                 ones_zeros.forEach(j => {
-                    if ((row+i>=0)&&(col+j>=0)&&(row+i<currentGen.length)&&(col+j<currentGen[0].length) && !(i==0 && j==0) && (currentGen[row+i][col+j]!=0)) {
+                    if ((row+i>=0)&&(col+j>=0)&&(row+i<gameMatrix.length)&&(col+j<gameMatrix[0].length) && !(i==0 && j==0) && (gameMatrix[row+i][col+j]!=0)) {
                         neighbor_count = neighbor_count + 1;
+                        let neighbor_color = colorsMatrix[row+i][col+j];
+                        cell_color[0] = cell_color[0]+Math.pow(neighbor_color[0],2);
+                        cell_color[1] = cell_color[1]+Math.pow(neighbor_color[1],2);
+                        cell_color[2] = cell_color[2]+Math.pow(neighbor_color[2],2);
                     }
                 })
             });
+            cell_color = cell_color.map(x => Math.pow(x/(neighbor_count+1),0.5));
+            let max_color_val = Math.max(...cell_color);
+            cell_color = cell_color.map(x => (x/max_color_val)*255);
 
-            let cell_state = currentGen[row][col];
+            let cell_state = gameMatrix[row][col];
             if (cell_state==0) {
                 if (neighbor_count==0) {continue}
                 if(neighbor_count==3) {
@@ -64,15 +81,19 @@ function nextGeneration(currentGen) {
                     nextGen[row][col] = cell_state + (1*lifespan);
                 }
             }
+            nextColorMat[row][col] = cell_color;
         }
     }
-    return nextGen
+    gameMatrix = JSON.parse(JSON.stringify(nextGen));
+    colorsMatrix = JSON.parse(JSON.stringify(nextColorMat));
 }
 
 //----------------------Setting Defaults-------------------------------
-for (let i=0;i<world_size[0];i++) {
+for (let i=0;i<gameMatrix[0].length;i++) {
     gameMatrix[i][i] = 1;
     gameMatrix[i][world_size[1]-1-i] = 1;
+    colorsMatrix[i][i] = paint_color;
+    colorsMatrix[i][world_size[1]-1-i] = paint_color;
 }
 
 let gameRect = {
@@ -241,12 +262,17 @@ function paintCell(x_coord,y_coord) {
     let row = Math.floor((gameRect2matScale[1]*y_coord)+mat_view[0][1]);
     if (row>gameMatrix.length-1) {
         row=gameMatrix.length-1;
+    }else if (row<0) {
+        row = 0;
     }
     if (col>gameMatrix[0].length-1) {
         col=gameMatrix[0].length-1;
+    }else if (col<0) {
+        col = 0;
     }
     if (gameMatrix[row][col]==0) {
         gameMatrix[row][col]=1;
+        colorsMatrix[row][col]=paint_color;
     }
 }
 
@@ -295,12 +321,17 @@ function eraseCell(x_coord,y_coord) {
     let row = Math.floor((gameRect2matScale[1]*y_coord)+mat_view[0][1]);
     if (row>gameMatrix.length-1) {
         row=gameMatrix.length-1;
+    }else if (row<0) {
+        row = 0;
     }
     if (col>gameMatrix[0].length-1) {
         col=gameMatrix[0].length-1;
+    }else if (col<0) {
+        col = 0;
     }
     if (gameMatrix[row][col]!=0) {
         gameMatrix[row][col]=0;
+        colorsMatrix[row][col]=[0,0,0];
     }
 }
     
@@ -325,9 +356,16 @@ let run_once = false;
 let run_repeat = false;
 function gameStep() {
     run_once = true;
+    run_repeat = false
+    document.getElementById('runGame').innerHTML = 'Run';
 }
 function gameRun() {
     run_repeat = !run_repeat;
+    if (run_repeat) {
+        document.getElementById('runGame').innerHTML = 'Stop';
+    }else {
+        document.getElementById('runGame').innerHTML = 'Run';
+    }
 }
 
 //---------------------------Game Loop----------------------------------
@@ -340,7 +378,7 @@ gameLoop();
 function gameLoop() {
     if (run_once) {
         run_once = false; run_repeat = false;
-        gameMatrix = nextGeneration(gameMatrix);
+        nextGeneration();
         last_draw_time = Date.now();
     }else if (run_repeat) {
         let game_speed = gameSpeed();
@@ -349,7 +387,7 @@ function gameLoop() {
         
         if (elapsed >= (1000/game_speed)) {
             last_draw_time = current_time;
-            gameMatrix = nextGeneration(gameMatrix);
+            nextGeneration();
         }
     }
     draw();
@@ -399,7 +437,6 @@ function drawGrid(game_view_range) {
 
 function drawCellsAndSelect(game_view_range) {
     ctx.save();
-    ctx.fillStyle = cell_color;
 
     let game_view_start = game_view_range[0];
     let game_view_end = game_view_range[1];
@@ -408,6 +445,8 @@ function drawCellsAndSelect(game_view_range) {
     let grid_cell_size = [mat2canvasScale[0]*1,mat2canvasScale[1]*1];
     let cell_size = [grid_cell_size[0]*cell_size_perc,grid_cell_size[1]*cell_size_perc];   //how much of one grid cell does a cell occupy
     let rounded_radius = 0.1*cell_size[0];
+
+    let select_size = [grid_cell_size[0]*select_size_perc,grid_cell_size[1]*select_size_perc];
     
     for(let row=game_view_start[1];row<game_view_end[1];row++) {
         for(let col=game_view_start[0];col<game_view_end[0];col++) {
@@ -420,6 +459,8 @@ function drawCellsAndSelect(game_view_range) {
                 let x_coord = gameRect.x+(col*mat2canvasScale[0])+((grid_cell_size[0]-cell_size[0])/2);
                 let y_coord = gameRect.y+(row*mat2canvasScale[1])+((grid_cell_size[1]-cell_size[1])/2);
                 ctx.beginPath();
+                let color = colorsMatrix[row][col];
+                ctx.fillStyle = 'rgb('+color[0]+','+color[1]+','+color[2]+')';
                 roundedRectangle(x_coord, y_coord,cell_size[0],cell_size[1],rounded_radius);
                 ctx.fill();
             }
@@ -458,6 +499,20 @@ function gameMatViewCoords() {
     }
 
     return [start_coords,end_coords]
+}
+
+function getRandomColor() {return Array.from([0, 0, 0], x => (Math.random() * 255))}
+
+function rainbow() {
+    for (let row=0;row<gameMatrix.length;row++) {
+        for (let col=0;col<gameMatrix[0].length;col++) {
+            if (gameMatrix[row][col]!=0) {
+                let color = getRandomColor();
+                color = color.map(x => (x/Math.max(...color))*255);
+                colorsMatrix[row][col] = color;
+            }
+        }
+    }
 }
 
 function expIncrement(inputVal,minv,maxv,exp) {
