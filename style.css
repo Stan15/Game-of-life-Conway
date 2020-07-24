@@ -2,11 +2,49 @@ body {
     background-color: #dde1e7;
 }
 
-#game {
-    margin: auto;
+#allGame {
     position: absolute;
-    padding: auto;
+    display: table;
+    height: fit-content;
+    width: fit-content;
     top: 0;bottom: 0;left: 0;right: 0;
+    transform: translate(-5%);
+    margin: auto;
+}
+
+#gameRules {
+    position: relative;
+    display: table-cell;
+    vertical-align: middle;
+    padding: 20px;
+}
+
+#rulesBox {
+    padding: 10px 30px 30px 0;
+    height: fit-content;
+    width: 200px;
+    overflow-wrap: break-word;
+    border-radius: 0.5em;
+    background-color: #dde1e7;
+    box-shadow: -3px -3px 8px #ffffffb2, 3px 3px 6px rgba(94, 104, 121, 0.945);
+
+}
+
+#gameRules h1 {
+    text-align: center;
+    line-height: 40px;
+}
+
+#gameRules li {
+    font-size: 10pt;
+    margin-bottom: 30px;
+}
+
+#game {
+    position: relative;
+    display: table-cell;
+    vertical-align: middle;
+    padding: 20px;
     text-align: center;
 }
 
