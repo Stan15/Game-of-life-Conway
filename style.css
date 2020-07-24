@@ -6,7 +6,6 @@ body {
     margin: auto;
     position: absolute;
     padding: auto;
-    overflow: auto;
     top: 0;bottom: 0;left: 0;right: 0;
     height: fit-content;
     width: 100%;
@@ -14,7 +13,7 @@ body {
 }
 
 #gameWindow {
-    margin: 2em auto 2em auto;
+    margin: 10px auto 10px auto;
     border-radius: 0.5em;
     height: 500px;
     width: 500px;
@@ -23,13 +22,13 @@ body {
 }
 
 #gameControls {
-    margin: 2em auto 2em auto;
+    margin: 10px auto 10px auto;
     height: 100px;
     width: 550px;
     border-radius: 0.5em;
     background-color: #dde1e7;
     box-shadow: -3px -3px 8px #ffffffb2, 3px 3px 6px rgba(94, 104, 121, 0.945);
-    padding: 2em;
+    padding: 10px;
 }
 
 .sliderControl {
@@ -46,7 +45,6 @@ body {
 
 
 .inputGroupLeft label {
-    text-align: left;
 }
 .radioGroupBelow label {
     display: inline-block;
