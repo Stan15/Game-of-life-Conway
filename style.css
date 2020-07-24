@@ -43,3 +43,17 @@ body {
     padding: 0;
     margin: 0;
 }
+
+
+.inputGroupLeft label {
+    text-align: left;
+}
+.radioGroupBelow label {
+    display: inline-block;
+    text-align: center;
+    margin: 0 0.2em;
+}
+.radioGroupBelow label input[type="radio"] {
+display: block;
+margin: 0.5em auto;
+}
