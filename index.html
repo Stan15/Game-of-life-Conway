@@ -7,7 +7,7 @@
     <body>
         <div id="game">
             <div id="gameWindow">
-                <canvas id="gameOfLifeCanvas" width="500" height="500"></canvas>
+                <canvas id="gameOfLifeCanvas"></canvas>
             </div>
             <div id="gameControls">
                 <div id="buttonControls">
@@ -16,14 +16,14 @@
 
                     <div id="handControls" class="radioGroupBelow">
                         <label for="pan">pan
-                            <input name="hand" id="pan" value="pan" type="radio" onclick="updateHandControls()" checked>
+                            <input name="hand" id="pan" value="pan" type="radio" checked>
                         </label>
                         <label for="paint">paint
-                            <input name="hand" id="paint" value="paint" type="radio" onclick="updateHandControls()">
+                            <input name="hand" id="paint" value="paint" type="radio">
                         </label>
                         
                         <label for="erase">erase
-                            <input name="hand" id="erase" value="erase" type="radio" onclick="updateHandControls()">
+                            <input name="hand" id="erase" value="erase" type="radio">
                         </label>
                         <button id="clear" onclick="clearWorld()">Clear</button>
                         <button id="rainbow" onclick="rainbow()">Rainbow</button>
@@ -31,14 +31,12 @@
 
                 </div>
                 
-                <div class="sliderControl" class="inputGroupLeft">
-                    <label for="gameZoomSlider">zoom
+                <div>
+                    <label for="gameZoomSlider" class="sliderControl">zoom
                         <input id="gameZoomSlider" type="range" min="1" max="252" step="0.00001">
                     </label>
-                </div>
-                <div class="sliderControl" class="inputGroupLeft">
-                    <label for="gameSpeedSlider">speed
-                        <input id="gameSpeedSlider" type="range" min="0.8" max="30" step="0.000001">
+                    <label for="gameSpeedSlider" class="sliderControl">speed
+                        <input id="gameSpeedSlider" type="range" min="0.8" max="50" step="0.000001">
                     </label>
                 </div>
             </div>
