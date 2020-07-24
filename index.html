@@ -7,13 +7,14 @@
     <body>
         <div id="game">
             <div id="gameWindow">
-                <div id="gameShadow"></div>
                 <canvas id="gameOfLifeCanvas" width="500" height="500"></canvas>
             </div>
             <div id="gameControls">
                 <div id="buttonControls">
                     <button id="runGame" onClick="gameRun()">Run</button>
                     <button id="stepGame" onClick="gameStep()">Step</button>
+                    <button id="paint" onClick="paintCells()">Step</button>
+                    <button id="erase" onClick="eraseCells()">Step</button>
                 </div>
                 <div class="sliderControl">
                     <p>zoom</p>
