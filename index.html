@@ -5,42 +5,56 @@
         <link href="style.css" rel="stylesheet">
     </head>
     <body>
-        <div id="game">
-            <div id="gameWindow">
-                <canvas id="gameOfLifeCanvas"></canvas>
+        <div id="allGame">
+            <div id="gameRules">
+                <div id="rulesBox">
+                    <h1>Rules</h1>
+                    <ol>
+                        <li>Any live cell with fewer than two live neighbours dies, as if by underpopulation.</li>
+                        <li>Any live cell with two or three live neighbours lives on to the next generation.</li>
+                        <li>Any live cell with more than three live neighbours dies, as if by overpopulation.</li>
+                        <li>Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.</li>
+                    </ol>
+                </div>
             </div>
-            <div id="gameControls">
-                <div id="buttonControls">
-                    <button id="runGame" onClick="gameRun()">Run</button>
-                    <button id="stepGame" onClick="gameStep()">Step</button>
-
-                    <div id="handControls" class="radioGroupBelow">
-                        <label for="pan">pan
-                            <input name="hand" id="pan" value="pan" type="radio" checked>
-                        </label>
-                        <label for="paint">paint
-                            <input name="hand" id="paint" value="paint" type="radio">
-                        </label>
-                        
-                        <label for="erase">erase
-                            <input name="hand" id="erase" value="erase" type="radio">
-                        </label>
-                        <button id="clear" onclick="clearWorld()">Clear</button>
-                        <button id="rainbow" onclick="rainbow()">Rainbow</button>
+            <div id="game">
+                <div id="gameWindow">
+                    <canvas id="gameOfLifeCanvas"></canvas>
+                </div>
+                <div id="gameControls">
+                    <div id="buttonControls">
+                        <button id="runGame" onClick="gameRun()">Run</button>
+                        <button id="stepGame" onClick="gameStep()">Step</button>
+    
+                        <div id="handControls" class="radioGroupBelow">
+                            <label for="pan">pan
+                                <input name="hand" id="pan" value="pan" type="radio" checked>
+                            </label>
+                            <label for="paint">paint
+                                <input name="hand" id="paint" value="paint" type="radio">
+                            </label>
+                            
+                            <label for="erase">erase
+                                <input name="hand" id="erase" value="erase" type="radio">
+                            </label>
+                            <button id="clear" onclick="clearWorld()">Clear</button>
+                            <button id="rainbow" onclick="rainbow()">Rainbow</button>
+                        </div>
+    
                     </div>
-
+                    
+                    <div>
+                        <label for="gameZoomSlider" class="sliderControl">zoom
+                            <input id="gameZoomSlider" type="range" min="1" max="252" step="0.00001">
+                        </label>
+                        <label for="gameSpeedSlider" class="sliderControl">speed
+                            <input id="gameSpeedSlider" type="range" min="0.8" max="50" step="0.000001">
+                        </label>
+                    </div>
                 </div>
-                
-                <div>
-                    <label for="gameZoomSlider" class="sliderControl">zoom
-                        <input id="gameZoomSlider" type="range" min="1" max="252" step="0.00001">
-                    </label>
-                    <label for="gameSpeedSlider" class="sliderControl">speed
-                        <input id="gameSpeedSlider" type="range" min="0.8" max="50" step="0.000001">
-                    </label>
-                </div>
+                <script src="gameOfLife.js"></script>
             </div>
-        </div>
-        <script src="gameOfLife.js"></script>
+        </div> 
+        
     </body>
 </html>
