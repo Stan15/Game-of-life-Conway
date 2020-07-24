@@ -2,10 +2,29 @@
 <html>
     <head>
         <title>Game of Life</title>
+        <link href="style.css" rel="stylesheet">
     </head>
     <body>
-        <h1>Conway's game of life</h1>
-        <canvas id="gameOfLifeCanvas" width="500" height="500"></canvas>
+        <div id="game">
+            <div id="gameWindow">
+                <div id="gameShadow"></div>
+                <canvas id="gameOfLifeCanvas" width="500" height="500"></canvas>
+            </div>
+            <div id="gameControls">
+                <div id="buttonControls">
+                    <button id="runGame" onClick="gameRun()">Run</button>
+                    <button id="stepGame" onClick="gameStep()">Step</button>
+                </div>
+                <div class="sliderControl">
+                    <p>zoom</p>
+                    <input id="gameZoomSlider" type="range" min="1" max="252" step="0.00001">
+                </div>
+                <div class="sliderControl">
+                    <p>speed</p>
+                    <input id="gameSpeedSlider" type="range" min="0.8" max="30" step="0.000001">
+                </div>
+            </div>
+        </div>
         <script src="gameOfLife.js"></script>
     </body>
 </html>
