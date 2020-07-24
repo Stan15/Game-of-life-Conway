@@ -11,18 +11,34 @@
             </div>
             <div id="gameControls">
                 <div id="buttonControls">
-                    <button id="runGame" onClick="gameRun()">Run</button>
+                    <button id="runGame" onClick="gameRun()">Run/Stop</button>
                     <button id="stepGame" onClick="gameStep()">Step</button>
-                    <button id="paint" onClick="paintCells()">Step</button>
-                    <button id="erase" onClick="eraseCells()">Step</button>
+
+                    <div id="handControls" class="radioGroupBelow">
+                        <label for="pan">pan
+                            <input name="hand" id="pan" value="pan" type="radio" onclick="updateHandControls()" checked>
+                        </label>
+                        <label for="paint">paint
+                            <input name="hand" id="paint" value="paint" type="radio" onclick="updateHandControls()">
+                        </label>
+                        
+                        <label for="erase">erase
+                            <input name="hand" id="erase" value="erase" type="radio" onclick="updateHandControls()">
+                        </label>
+                        <button id="clear" onclick="clearWorld()">clear</button>
+                    </div>
+
                 </div>
-                <div class="sliderControl">
-                    <p>zoom</p>
-                    <input id="gameZoomSlider" type="range" min="1" max="252" step="0.00001">
+                
+                <div class="sliderControl" class="inputGroupLeft">
+                    <label for="gameZoomSlider">zoom
+                        <input id="gameZoomSlider" type="range" min="1" max="252" step="0.00001">
+                    </label>
                 </div>
-                <div class="sliderControl">
-                    <p>speed</p>
-                    <input id="gameSpeedSlider" type="range" min="0.8" max="30" step="0.000001">
+                <div class="sliderControl" class="inputGroupLeft">
+                    <label for="gameSpeedSlider">speed
+                        <input id="gameSpeedSlider" type="range" min="0.8" max="30" step="0.000001">
+                    </label>
                 </div>
             </div>
         </div>
