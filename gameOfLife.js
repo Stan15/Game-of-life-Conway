@@ -1,180 +1,347 @@
-let arraySize = 500
-let gameMatrix = Array.from(Array(arraySize), _ => Array(arraySize).fill(0));
-for (let i=0;i<gameMatrix.length;i++) {
-    gameMatrix[i][i] = 1;
-    gameMatrix[i][gameMatrix[0].length-1-i] = 1;
-}
-
 let canvas = document.getElementById('gameOfLifeCanvas');
 let ctx = canvas.getContext('2d');
 
-let zoom_percent = (100/gameMatrix.length)*100;
-if (zoom_percent > 100) {
-    zoom_percent = 100;
+world_size = [250,250];
+let gameMatrix = Array.from(Array(world_size[0]), _ => Array(world_size[1]).fill(0));
+let selectMatrix = Array.from(Array(world_size[0]), _ => Array(world_size[1]).fill(0));
+
+//--------------------Game Customisation-------------------------------------------------
+let lifespan = false;
+let cell_lifespan = 10; //each cell lives only for 10 generations
+
+let gridline_width = 1;
+let cell_size_perc = 0.85; //max is 1. if max, it occupies all of the grid cell it's in
+let select_size;
+
+let cell_color = 'white';
+let bg_color = 'rgb(40,40,40)';
+let gridline_color = '#ffffff10';
+let select_alpha = 0.3;
+let select_yes_color = 'rgb(118,255,3'+select_alpha+')';
+let select_no_color = 'rgb(244,67,54'+select_alpha+')';
+
+let zoom_slider_exp = 2;    //has to be greater or equal to 1
+
+let speed_cap_max = 30; //the maximum value that the speed can reach, regardless of html speed slider max.
+let speed_cap_min = 0.01;
+
+let defaultGameSpeed = 5; //2 generation passes every second
+let defaultZoom = 100;  //zoom in to see a 100*100 cells space. unit = percentage
+let zoom_cap_min = 1;   //zoom in cap when zooming closer than one cell.
+let zoom_cap_max = 400;
+
+//---------------------Game Brains-------------------------------------------------------
+function nextGeneration(currentGen) {
+    let nextGen = JSON.parse(JSON.stringify(currentGen));
+    let ones_zeros = [-1,0,1];
+
+    for (let row=0;row<currentGen.length;row++) {
+        for (let col=0;col<currentGen[0].length;col++) {
+            let neighbor_count = 0;
+            ones_zeros.forEach(i => {
+                ones_zeros.forEach(j => {
+                    if ((row+i>=0)&&(col+j>=0)&&(row+i<currentGen.length)&&(col+j<currentGen[0].length) && !(i==0 && j==0) && (currentGen[row+i][col+j]!=0)) {
+                        neighbor_count = neighbor_count + 1;
+                    }
+                })
+            });
+
+            let cell_state = currentGen[row][col];
+            if (cell_state==0) {
+                if (neighbor_count==0) {continue}
+                if(neighbor_count==3) {
+                    nextGen[row][col] = 1;
+                }
+            }else {
+                if ((neighbor_count<2)||(neighbor_count>3)||(cell_state>cell_lifespan)*(lifespan)) {
+                    nextGen[row][col] = 0;
+                }else {
+                    nextGen[row][col] = cell_state + (1*lifespan);
+                }
+            }
+        }
+    }
+    return nextGen
 }
+
+//----------------------Setting Defaults-------------------------------
+for (let i=0;i<world_size[0];i++) {
+    gameMatrix[i][i] = 1;
+    gameMatrix[i][world_size[1]-1-i] = 1;
+}
+
 let gameRect = {
     x: 0,
     y: 0,
-    height: 0,
-    width: 0,
+    width: canvas.width*(1/calcZoomRatio(defaultZoom)), //100% zoom means the game width is equal to the canvas width
+    height: (gameMatrix.length/gameMatrix[0].length)*canvas.width*(1/calcZoomRatio(defaultZoom)) //  game height/game width equals gameMatrix height/gameMatrix width
 }
-zoom(zoom_percent);    //set gameRect height and width
-centerView();          //set the x and y coordinates of the gameRect to be centered with the canvas
-let gridline_width = 5;
+panToCenter();  //pan the view to the center cells of the game matrix
 
-var dragging = false;
-canvas.addEventListener('mousedown', function(event) {
-    pivotVector = {
-        x: event.pageX - gameRect.x,
-        y: event.pageY - gameRect.y
-    }
+//zoom
+let minZoom = parseFloat(document.getElementById("gameZoomSlider").min);
+let maxZoom = parseFloat(document.getElementById("gameZoomSlider").max);
+if (maxZoom>zoom_cap_max) {
+    maxZoom = zoom_cap_max;
+    document.getElementById("gameZoomSlider").max = zoom_cap_max;
+}
+if (minZoom<zoom_cap_min) {
+    minZoom = zoom_cap_min;
+    document.getElementById("gameZoomSlider").min = zoom_cap_min;
+}
+document.getElementById("gameZoomSlider").value = inverseExpInc(defaultZoom,minZoom,maxZoom,zoom_slider_exp);
+
+//game speed
+let minGameSpeed = parseFloat(document.getElementById("gameSpeedSlider").min);
+let maxGameSpeed = parseFloat(document.getElementById("gameSpeedSlider").max);
+
+if (maxGameSpeed>speed_cap_max) {
+    maxGameSpeed = speed_cap_max;
+    document.getElementById("gameSpeedSlider").max = speed_cap_max;
+}
+if (minGameSpeed<speed_cap_min) {
+    minGameSpeed = speed_cap_min;
+    document.getElementById("gameSpeedSlider").min = speed_cap_min;
+}
+document.getElementById("gameSpeedSlider").value = speedSliderPoint(defaultGameSpeed);
+
+//------------------------------------Game Speed------------------------------------------
+function gameSpeed() {
+    return parseFloat(document.getElementById("gameSpeedSlider").value);
+}
+
+function speedSliderPoint(value) {
+    return value
+}
+
+//----------------------Zooming Game----------------------------------------------------
+function zoom_unit() {
+    return expIncrement(maxZoom-parseFloat(document.getElementById("gameZoomSlider").value),minZoom,maxZoom,zoom_slider_exp);
+}
+function zoom(z_unit) {
+    let zoom_ratio = calcZoomRatio(z_unit)
+    let new_width = canvas.width*(1/zoom_ratio);
+    let new_height = (gameMatrix.length/gameMatrix[0].length)*new_width;
+
+    let zoom_pivot_vector = [(canvas.width/2)-gameRect.x,(canvas.height/2)-gameRect.y]; //pivots center of canvas to top left of gameRect
+    let scale_pivot_factor = [new_width/gameRect.width,new_height/gameRect.height];
+    zoom_pivot_vector[0] = zoom_pivot_vector[0]*scale_pivot_factor[0];
+    zoom_pivot_vector[1] = zoom_pivot_vector[1]*scale_pivot_factor[1]
+
+    gameRect.x = (canvas.width/2)-zoom_pivot_vector[0];
+    gameRect.y = (canvas.height/2)-zoom_pivot_vector[1];
+    gameRect.height = new_height;
+    gameRect.width = new_width;
+}
+
+//----------------------Panning Game----------------------------------------------------
+let dragging = false;
+let pan_pivot_vector = [];
+canvas.addEventListener('mousedown', onMouseDown);
+canvas.addEventListener('mouseup', onMouseUp);
+canvas.addEventListener('mousemove', onMouseMove);
+
+function onMouseDown(event) {
+    pan_pivot_vector = [event.pageX - gameRect.x,event.pageY - gameRect.y]    //top left of game matrix pivots with the cursor
     dragging = true;
-});
-canvas.addEventListener('mouseup',() => {dragging = false;});
-
-canvas.addEventListener('mousemove', function(event) {
-    canvas_rect = event.target.getBoundingClientRect();
-    if (event.pageX<=canvas_rect.left || event.pageX>=canvas_rect.right || event.pageY<=canvas_rect.top || event.pageY>=canvas_rect.bottom) {
-        drag = false;
-    }
+}
+function onMouseUp() {
+    dragging = false
+}
+function onMouseMove(event) {
     if (dragging) {
+        let gameRectPos = [gameRect.x,gameRect.y];
+        let mousePos = [event.pageX,event.pageY];
+        let offset = [mousePos[0]-pan_pivot_vector[0],mousePos[1]-pan_pivot_vector[1]];
+
+        //keeping offset in range
         let offsetRangeX = [0,canvas.width-gameRect.width];
         let offsetRangeY = [0,canvas.height-gameRect.height];
         let offsetRanges = [offsetRangeX.sort(),offsetRangeY.sort()];
-
-        let offset = [event.pageX-pivotVector.x,event.pageY-pivotVector.y];
-        
         offset.forEach(function(item,index){
-            if (item<offsetRanges[index][0]) {
+            if (item<offsetRanges[index][0]+1) {
                 this[index] = offsetRanges[index][0];
-            }else if (item>offsetRanges[index][1]) {
+                pan_pivot_vector[index] = mousePos[index]-gameRectPos[index]  //adjusting the pivot vector values as the gameRect didn,t move as expected according to the previous pivot values
+            }else if (item>offsetRanges[index][1]-1) {
                 this[index] = offsetRanges[index][1];
+                pan_pivot_vector[index] = mousePos[index]-gameRectPos[index];
             }
         },offset);
+
+        //setting offset
         gameRect.x = offset[0];
         gameRect.y = offset[1];
     }
-
-})
-
-
-let gameSpeed = 0.2;    //1 cycle every 0.5 seconds
-let timeThen = Date.now();
-let fps = 60;
-let mspf = 1000/fps;
-let run_once = false;
-let run_repeat = true;
-gameLoop()
-function gameLoop() {
-    if (run_once) {
-        run_once = false;
-        run_repeat = false;
-        let slow = true;
-        gameAnimate(slow);
-        draw();
-    }else if (run_repeat) {
-        let slow = false;
-        timeNow = Date.now();
-        elapsed = timeNow - timeThen;
-        if (elapsed >= (gameSpeed*1000)) {
-            timeThen = timeNow - (elapsed % (gameSpeed*1000));
-            gameAnimate(slow);
-        }
-        draw();
-    }else if (dragging) {
-        draw();
-    }
-    setTimeout(function() {
-        requestAnimationFrame(gameLoop);
-      }, mspf);
 }
 
-function gameAnimate(slow) {
-    let newGameMatrix = JSON.parse(JSON.stringify(gameMatrix));
-    let ones_zeros = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];   //cartesian product of [-1,0,1] and itself, but without [0,0].
-    for (let row=0;row<gameMatrix.length;row++) {
-        for (let col=0;col<gameMatrix[0].length;col++) {
-            neighbor_count = 0
-            ones_zeros.forEach(element => {
-                nRow = row + element[0];
-                nCol = col + element[1];
-                if (nRow<0 || nCol<0 || nRow>gameMatrix.length-1 || nCol>gameMatrix[0].length-1) {
-                    return
-                }
-                neighbor_count = neighbor_count + gameMatrix[nRow][nCol];
-            })
-            
-            if (gameMatrix[row][col]==0 && neighbor_count==3) {
-                newGameMatrix[row][col]=1;
-            }else if(gameMatrix[row][col]==1 && ((neighbor_count<2)||(neighbor_count>3))) {
-                newGameMatrix[row][col]=0;
-            }
-        }
-    }
-    gameMatrix = JSON.parse(JSON.stringify(newGameMatrix));
-}
-
-function draw() {
-    ctx.fillStyle = 'black'
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    drawGrid(gridline_width,'rgb(50,50,50)');
-    drawCells('white',0.85);
-}
-
-function drawGrid(line_width,grid_color) {
-    ctx.save();
-    ctx.strokeStyle = grid_color;
-
-    scale = [gameRect.width/gameMatrix[0].length,gameRect.height/gameMatrix.length];
-    for (let i=0;i<gameMatrix.length;i++) {
-        ctx.beginPath();
-        ctx.moveTo((i*scale[0])+gameRect.x,gameRect.y);
-        ctx.lineTo((i*scale[0])+gameRect.x,gameRect.y+gameRect.height);
-        ctx.stroke();
-    }
-    for (let i=0;i<gameMatrix[0].length;i++) {
-        ctx.beginPath();
-        ctx.moveTo(gameRect.x,gameRect.y+(i*scale[1]));
-        ctx.lineTo(gameRect.x+gameRect.width,gameRect.y+(i*scale[1]));
-        ctx.stroke();
-    }
-    ctx.restore();
-}
-
-function drawCells(cell_color,sizePercent) {
-    ctx.save();
-    ctx.fillStyle = cell_color;
-
-    scale = [gameRect.width/gameMatrix[0].length,gameRect.height/gameMatrix.length];
-
-    let grid_cell_size = [scale[0]*1,scale[1]*1];
-    let cell_size = [grid_cell_size[0]*sizePercent,grid_cell_size[1]*sizePercent];   //how much of one grid cell does a cell occupy
-    let rounded_radius = 0.1*cell_size[0];
-    for(let row=0;row<gameMatrix.length;row++) {
-        for(let col=0;col<gameMatrix[0].length;col++) {
-            if (gameMatrix[row][col] != 0) {
-                let pointX = gameRect.x+((col*scale[0])+((grid_cell_size[0]-cell_size[0])/2));
-                let pointY = gameRect.y+((row*scale[1])+((grid_cell_size[1]-cell_size[1])/2));
-                ctx.save();
-                ctx.beginPath();
-                roundedRectangle(pointX,pointY,cell_size[0],cell_size[1],rounded_radius);
-                ctx.fill();
-            }
-        }
-    }
-    ctx.restore();
-}
-
-function centerView() {  //center the view of the gameMatrix
+function panToCenter() {
     gameRect.x = (canvas.width-gameRect.width)/2;
     gameRect.y = (canvas.height-gameRect.height)/2;
 }
 
-function zoom(percent) {
-    percent = percent/100;
-    gameRect.width = canvas.width*(1/percent);
-    gameRect.height = (gameMatrix.length/gameMatrix[0].length)*gameRect.width;
+//---------------------------Game Controls------------------------------
+let run_once = false;
+let run_repeat = false;
+function gameStep() {
+    run_once = true;
+}
+function gameRun() {
+    run_repeat = !run_repeat;
+}
+
+//---------------------------Game Loop----------------------------------
+let fps = 60;
+draw(); //display the starting frame
+
+let last_draw_time = Date.now();
+gameLoop();
+function gameLoop() {
+    if (run_once) {
+        run_once = false; run_repeat = false;
+        gameMatrix = nextGeneration(gameMatrix);
+        last_draw_time = Date.now();
+    }else if (run_repeat) {
+        let game_speed = gameSpeed();
+        let current_time = Date.now();
+        let elapsed = current_time-last_draw_time;
+        
+        if (elapsed >= (1000/game_speed)) {
+            last_draw_time = current_time;
+            gameMatrix = nextGeneration(gameMatrix);
+        }
+    }
+    draw();
+    setTimeout(function() {
+        requestAnimationFrame(gameLoop);
+      }, 1000/fps);
+}
+
+//-----------------------------------Drawing----------------------------------------------------
+function draw() {
+    zoom(zoom_unit());
+    let game_view_range = gameMatViewCoords();
+
+    ctx.fillStyle = bg_color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawGrid(game_view_range);
+    drawCellsAndSelect(game_view_range);
+}
+
+function drawGrid(game_view_range) {
+    ctx.save();
+    ctx.lineWidth = gridline_width;
+    ctx.strokeStyle = gridline_color;
+
+    let game_view_start = game_view_range[0];
+    let game_view_end = game_view_range[1];
+
+    let mat2canvasScale = [gameRect.width/gameMatrix[0].length,gameRect.height/gameMatrix.length];
+    for (let i=game_view_start[0];i<game_view_end[0];i++) {
+        i = Math.floor(i);
+        let x_coord = gameRect.x+(i*mat2canvasScale[0]);
+        ctx.beginPath();
+        ctx.moveTo(x_coord, gameRect.y+(game_view_start[1]*mat2canvasScale[1]));
+        ctx.lineTo(x_coord, gameRect.y+(game_view_end[1]*mat2canvasScale[1]));
+        ctx.stroke();
+    }
+    for (let i=game_view_start[1];i<game_view_end[1];i++) {
+        i = Math.floor(i);
+        let y_coord = gameRect.y+(i*mat2canvasScale[1]);
+        ctx.beginPath();
+        ctx.moveTo(gameRect.x+(game_view_start[0]*mat2canvasScale[0]), y_coord);
+        ctx.lineTo(gameRect.x+(game_view_end[0]*mat2canvasScale[0]), y_coord);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawCellsAndSelect(game_view_range) {
+    ctx.save();
+    ctx.fillStyle = cell_color;
+
+    let game_view_start = game_view_range[0];
+    let game_view_end = game_view_range[1];
+
+    let mat2canvasScale = [gameRect.width/gameMatrix[0].length,gameRect.height/gameMatrix.length];
+    let grid_cell_size = [mat2canvasScale[0]*1,mat2canvasScale[1]*1];
+    let cell_size = [grid_cell_size[0]*cell_size_perc,grid_cell_size[1]*cell_size_perc];   //how much of one grid cell does a cell occupy
+    let rounded_radius = 0.1*cell_size[0];
+    
+    for(let row=game_view_start[1];row<game_view_end[1];row++) {
+        for(let col=game_view_start[0];col<game_view_end[0];col++) {
+            row = Math.floor(row);
+            col = Math.floor(col);
+            if (row>gameMatrix.length || col>gameMatrix[0].length) {
+                continue
+            }
+            if (gameMatrix[row][col]!=0) {
+                let x_coord = gameRect.x+(col*mat2canvasScale[0])+((grid_cell_size[0]-cell_size[0])/2);
+                let y_coord = gameRect.y+(row*mat2canvasScale[1])+((grid_cell_size[1]-cell_size[1])/2);
+                ctx.beginPath();
+                roundedRectangle(x_coord, y_coord,cell_size[0],cell_size[1],rounded_radius);
+                ctx.fill();
+            }
+        }
+    }
+
+    ctx.restore();
+}
+
+//---------------------------Minor Function----------------------------------------------
+function gameMatViewCoords() {
+    let canvas2matScale = [gameMatrix[0].length/gameRect.width,gameMatrix.length/gameRect.height];
+    let start_coords = [];
+    let end_coords = [];
+
+    if (gameRect.width<=canvas.width) {
+        start_coords[0] = 0;
+        end_coords[0] = gameRect.width*canvas2matScale[0];
+    }else {
+        start_coords[0] = Math.abs(gameRect.x)*canvas2matScale[0];
+        end_coords[0] = start_coords[0]+(canvas.width*canvas2matScale[0]);
+    }
+    if (gameRect.height<=canvas.height) {
+        start_coords[1] = 0;
+        end_coords[1] = gameRect.height*canvas2matScale[1];
+    }else {
+        start_coords[1] = Math.abs(gameRect.y)*canvas2matScale[1];
+        end_coords[1] = start_coords[1]+(canvas.height*canvas2matScale[1]);
+    }
+
+    if (end_coords[0]>gameMatrix[0].length) {
+        end_coords[0] = gameMatrix[0].length;
+    }
+    if (end_coords[1]>gameMatrix.length) {
+        end_coords[1] = gameMatrix.length;
+    }
+
+    return [start_coords,end_coords]
+}
+
+function expIncrement(inputVal,minv,maxv,exp) {
+    if (inputVal<minv) {
+        inputVal = minv;
+    }else if(inputVal>maxv) {
+        inputVal = maxv;
+    }
+    let outputVal = ((maxv-minv)*Math.pow(((inputVal-minv)/(maxv-minv)),exp))+minv;
+    
+    return outputVal
+}
+
+function inverseExpInc(outputVal,minv,maxv,exp) {
+    if (outputVal<minv) {
+        outputVal = minv;
+    }else if(outputVal>maxv) {
+        outputVal = maxv;
+    }
+    let inputVal = (Math.pow((outputVal-minv)/(minv-maxv),1/exp)*(maxv-minv))+minv;
+    
+    return inputVal
+}
+
+function calcZoomRatio(matSize) {
+    return (matSize/gameMatrix.length)
 }
 
 function roundedRectangle(x, y, width, height, rounded) {
