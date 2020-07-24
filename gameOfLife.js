@@ -2,8 +2,13 @@ let canvas = document.getElementById('gameOfLifeCanvas');
 let ctx = canvas.getContext('2d');
 
 world_size = [250,250];
-let gameMatrix = Array.from(Array(world_size[0]), _ => Array(world_size[1]).fill(0));
-let selectMatrix = Array.from(Array(world_size[0]), _ => Array(world_size[1]).fill(0));
+let gameMatrix;
+let selectMatrix;
+clearWorld()
+function clearWorld() {
+    gameMatrix = Array.from(Array(world_size[0]), _ => Array(world_size[1]).fill(0));
+    selectMatrix = Array.from(Array(world_size[0]), _ => Array(world_size[1]).fill(0));
+}
 
 //--------------------Game Customisation-------------------------------------------------
 let lifespan = false;
@@ -14,7 +19,7 @@ let cell_size_perc = 0.85; //max is 1. if max, it occupies all of the grid cell 
 let select_size;
 
 let cell_color = 'white';
-let bg_color = 'rgb(40,40,40)';
+let bg_color = 'rgb(0,0,0)';
 let gridline_color = '#ffffff10';
 let select_alpha = 0.3;
 let select_yes_color = 'rgb(118,255,3'+select_alpha+')';
@@ -135,21 +140,33 @@ function zoom(z_unit) {
 }
 
 //----------------------Panning Game----------------------------------------------------
-let dragging = false;
+let panning;
 let pan_pivot_vector = [];
-canvas.addEventListener('mousedown', onMouseDown);
-canvas.addEventListener('mouseup', onMouseUp);
-canvas.addEventListener('mousemove', onMouseMove);
 
-function onMouseDown(event) {
+function addPanEventListeners() {
+    panning = false;
+    canvas.addEventListener('mousedown', PanOnMouseDown);
+    canvas.addEventListener('mousemove', PanOnMouseMove);
+    canvas.addEventListener('mouseup', PanOnMouseUp);
+    canvas.addEventListener('mouseout', PanOnMouseUp);
+}
+function removePanEventListeners() {
+    canvas.removeEventListener('mousedown', PanOnMouseDown);
+    canvas.removeEventListener('mousemove', PanOnMouseMove);
+    canvas.removeEventListener('mouseup', PanOnMouseUp);
+    canvas.removeEventListener('mouseout', PanOnMouseUp);
+    panning = false;
+}
+
+function PanOnMouseDown(event) {
     pan_pivot_vector = [event.pageX - gameRect.x,event.pageY - gameRect.y]    //top left of game matrix pivots with the cursor
-    dragging = true;
+    panning = true;
 }
-function onMouseUp() {
-    dragging = false
+function PanOnMouseUp() {
+    panning = false
 }
-function onMouseMove(event) {
-    if (dragging) {
+function PanOnMouseMove(event) {
+    if (panning) {
         let gameRectPos = [gameRect.x,gameRect.y];
         let mousePos = [event.pageX,event.pageY];
         let offset = [mousePos[0]-pan_pivot_vector[0],mousePos[1]-pan_pivot_vector[1]];
@@ -179,7 +196,131 @@ function panToCenter() {
     gameRect.y = (canvas.height-gameRect.height)/2;
 }
 
+//----------------------------Painting Cells-------------------------------------
+let painting;
+
+function addPaintEventListeners() {
+    panning = false;
+    canvas.addEventListener('mousedown', PaintOnMouseDown);
+    canvas.addEventListener('mousemove', PaintOnMouseMove);
+    canvas.addEventListener('mouseup', PaintOnMouseUp);
+    canvas.addEventListener('mouseout', PaintOnMouseUp);
+}
+function removePaintEventListeners() {
+    canvas.removeEventListener('mousedown', PaintOnMouseDown);
+    canvas.removeEventListener('mousemove', PaintOnMouseMove);
+    canvas.removeEventListener('mouseup', PaintOnMouseUp);
+    canvas.removeEventListener('mouseout', PaintOnMouseUp);
+    painting = false;
+}
+
+function PaintOnMouseDown() {
+    painting = true;
+    let rect = event.target.getBoundingClientRect();
+    let x_coord = event.pageX - rect.left;
+    let y_coord = event.pageY - rect.top;
+    paintCell(x_coord,y_coord);
+}
+function PaintOnMouseUp() {
+    painting = false
+}
+
+function PaintOnMouseMove(event) {
+    if (painting) {
+        let rect = event.target.getBoundingClientRect();
+        let x_coord = event.pageX - rect.left;
+        let y_coord = event.pageY - rect.top;
+        paintCell(x_coord,y_coord);
+    }
+}
+
+function paintCell(x_coord,y_coord) {
+    let mat_view = gameMatViewCoords();
+    let gameRect2matScale = [gameMatrix[0].length/gameRect.width,gameMatrix.length/gameRect.height];
+    let col = Math.floor((gameRect2matScale[0]*x_coord)+mat_view[0][0]);
+    let row = Math.floor((gameRect2matScale[1]*y_coord)+mat_view[0][1]);
+    if (row>gameMatrix.length-1) {
+        row=gameMatrix.length-1;
+    }
+    if (col>gameMatrix[0].length-1) {
+        col=gameMatrix[0].length-1;
+    }
+    if (gameMatrix[row][col]==0) {
+        gameMatrix[row][col]=1;
+    }
+}
+
+//---------------------------------Erasing Cells---------------------------
+let erasing;
+
+function addEraseEventListeners() {
+    panning = false;
+    canvas.addEventListener('mousedown', EraseOnMouseDown);
+    canvas.addEventListener('mousemove', EraseOnMouseMove);
+    canvas.addEventListener('mouseup', EraseOnMouseUp);
+    canvas.addEventListener('mouseout', EraseOnMouseUp);
+}
+function removeEraseEventListeners() {
+    canvas.removeEventListener('mousedown', EraseOnMouseDown);
+    canvas.removeEventListener('mousemove', EraseOnMouseMove);
+    canvas.removeEventListener('mouseup', EraseOnMouseUp);
+    canvas.removeEventListener('mouseout', EraseOnMouseUp);
+    erasing = false;
+}
+
+function EraseOnMouseDown(event) {
+    erasing = true;
+    let rect = event.target.getBoundingClientRect();
+    let x_coord = event.pageX - rect.left;
+    let y_coord = event.pageY - rect.top;
+    eraseCell(x_coord,y_coord);
+}
+function EraseOnMouseUp() {
+    erasing = false
+}
+
+function EraseOnMouseMove(event) {
+    if (erasing) {
+        let rect = event.target.getBoundingClientRect();
+        let x_coord = event.pageX - rect.left;
+        let y_coord = event.pageY - rect.top;
+        eraseCell(x_coord,y_coord);
+    }
+}
+
+function eraseCell(x_coord,y_coord) {
+    let mat_view = gameMatViewCoords();
+    let gameRect2matScale = [gameMatrix[0].length/gameRect.width,gameMatrix.length/gameRect.height];
+    let col = Math.floor((gameRect2matScale[0]*x_coord)+mat_view[0][0]);
+    let row = Math.floor((gameRect2matScale[1]*y_coord)+mat_view[0][1]);
+    if (row>gameMatrix.length-1) {
+        row=gameMatrix.length-1;
+    }
+    if (col>gameMatrix[0].length-1) {
+        col=gameMatrix[0].length-1;
+    }
+    if (gameMatrix[row][col]!=0) {
+        gameMatrix[row][col]=0;
+    }
+}
+    
+
 //---------------------------Game Controls------------------------------
+function updateHandControls() {
+    removePanEventListeners();
+    removePaintEventListeners();
+    removeEraseEventListeners();
+    
+    let control = document.querySelector('input[name="hand"]:checked').value;
+    if (control == "pan") {
+        addPanEventListeners();
+    }else if (control == "paint") {
+        addPaintEventListeners();
+    }else if (control == "erase") {
+        addEraseEventListeners();
+    }
+}
+
 let run_once = false;
 let run_repeat = false;
 function gameStep() {
@@ -192,6 +333,7 @@ function gameRun() {
 //---------------------------Game Loop----------------------------------
 let fps = 60;
 draw(); //display the starting frame
+updateHandControls();
 
 let last_draw_time = Date.now();
 gameLoop();
