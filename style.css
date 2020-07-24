@@ -1,0 +1,52 @@
+body {
+    background-color: #dde1e7;
+}
+
+#game {
+    margin: auto;
+    position: absolute;
+    padding: auto;
+    overflow: auto;
+    top: 0;bottom: 0;left: 0;right: 0;
+    height: 100%;
+    width: 50%;
+    text-align: center;
+}
+
+#gameWindow {
+    margin: 1em auto 1em auto;
+    border-radius: 0.5em;
+    height: 500px;
+    width: 500px;
+    padding: 0;
+    background-color: blue;
+    box-shadow: inset 0 0 10px #000000;
+}
+
+#gameControls {
+    margin: 1em auto 1em auto;
+    height: 100px;
+    width: 600px;
+    border-radius: 0.5em;
+    background-color: #dde1e7;
+    box-shadow: -3px -3px 8px #ffffffb2, 3px 3px 6px rgba(94, 104, 121, 0.945);
+    padding: 2em;
+}
+
+.sliderControl {
+    display: inline-flex;
+    padding: 0px;
+    margin: 5px 10px 5px 10px;
+}
+
+#gameOfLifeCanvas {
+    border-radius: 0.5em;
+    padding: 0;
+    margin: 0;
+}
+
+#gameShadow {
+    position: relative;
+    z-index: 10;
+    background-color: #4d4d4d;
+}
