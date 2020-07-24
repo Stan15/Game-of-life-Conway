@@ -1,5 +1,12 @@
 let canvas = document.getElementById('gameOfLifeCanvas');
+resizeCanvas();
 let ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    let parent_rect = canvas.parentNode.getBoundingClientRect();
+    canvas.height = parent_rect.height;
+    canvas.width = parent_rect.width;
+}
 
 world_size = [250,250];
 let gameMatrix;
@@ -24,6 +31,9 @@ let gridline_width = 1;
 let cell_size_perc = 0.85; //max is 1. if max, it occupies all of the grid cell it's in
 let select_size_perc = 0.95;
 
+
+let colorful = false;
+let default_cell_color = [255,255,255];
 let paint_color = [255,255,255];
 let bg_color = 'rgb(0,0,0)';
 let gridline_color = '#ffffff10';
@@ -50,23 +60,33 @@ function nextGeneration() {
     for (let row=0;row<gameMatrix.length;row++) {
         for (let col=0;col<gameMatrix[0].length;col++) {
             let neighbor_count = 0;
-            let cell_color = colorsMatrix[row][col];
 
-            cell_color = cell_color.map(x => Math.pow(x,2));
+            let cell_color;
+            if (colorful) {
+                cell_color = colorsMatrix[row][col];
+                cell_color = cell_color.map(x => Math.pow(x,2));
+            }else {
+                cell_color = default_cell_color;
+            }
             ones_zeros.forEach(i => {
                 ones_zeros.forEach(j => {
                     if ((row+i>=0)&&(col+j>=0)&&(row+i<gameMatrix.length)&&(col+j<gameMatrix[0].length) && !(i==0 && j==0) && (gameMatrix[row+i][col+j]!=0)) {
                         neighbor_count = neighbor_count + 1;
-                        let neighbor_color = colorsMatrix[row+i][col+j];
-                        cell_color[0] = cell_color[0]+Math.pow(neighbor_color[0],2);
-                        cell_color[1] = cell_color[1]+Math.pow(neighbor_color[1],2);
-                        cell_color[2] = cell_color[2]+Math.pow(neighbor_color[2],2);
+                        if (colorful) {
+                            let neighbor_color = colorsMatrix[row+i][col+j];
+                            cell_color[0] = cell_color[0]+Math.pow(neighbor_color[0],2);
+                            cell_color[1] = cell_color[1]+Math.pow(neighbor_color[1],2);
+                            cell_color[2] = cell_color[2]+Math.pow(neighbor_color[2],2);
+                        }
                     }
                 })
             });
-            cell_color = cell_color.map(x => Math.pow(x/(neighbor_count+1),0.5));
-            let max_color_val = Math.max(...cell_color);
-            cell_color = cell_color.map(x => (x/max_color_val)*255);
+
+            if (colorful) {
+                cell_color = cell_color.map(x => Math.pow(x/(neighbor_count+1),0.5));
+                let max_color_val = Math.max(...cell_color);
+                cell_color = cell_color.map(x => (x/max_color_val)*255);
+            }
 
             let cell_state = gameMatrix[row][col];
             if (cell_state==0) {
@@ -92,8 +112,8 @@ function nextGeneration() {
 for (let i=0;i<gameMatrix[0].length;i++) {
     gameMatrix[i][i] = 1;
     gameMatrix[i][world_size[1]-1-i] = 1;
-    colorsMatrix[i][i] = paint_color;
-    colorsMatrix[i][world_size[1]-1-i] = paint_color;
+    colorsMatrix[i][i] = default_cell_color;
+    colorsMatrix[i][world_size[1]-1-i] = default_cell_color;
 }
 
 let gameRect = {
@@ -160,64 +180,123 @@ function zoom(z_unit) {
     gameRect.width = new_width;
 }
 
-//----------------------Panning Game----------------------------------------------------
+//-----------------------------Hand Controls--------------------------------------------
+let touching;
+
+let pan_pivot_vector;
 let panning;
-let pan_pivot_vector = [];
-
-function addPanEventListeners() {
+let painting;
+let erasing;
+stopHand();
+function stopHand() {
     panning = false;
-    canvas.addEventListener('mousedown', PanOnMouseDown);
-    canvas.addEventListener('mousemove', PanOnMouseMove);
-    canvas.addEventListener('mouseup', PanOnMouseUp);
-    canvas.addEventListener('mouseout', PanOnMouseUp);
-    canvas.addEventListener('touchstart', PanOnMouseDown);
-    canvas.addEventListener('touchmove', PanOnMouseMove);
-    canvas.addEventListener('touchend', PanOnMouseUp);
-    canvas.addEventListener('touchcancel', PanOnMouseUp);
-}
-function removePanEventListeners() {
-    canvas.removeEventListener('mousedown', PanOnMouseDown);
-    canvas.removeEventListener('mousemove', PanOnMouseMove);
-    canvas.removeEventListener('mouseup', PanOnMouseUp);
-    canvas.removeEventListener('mouseout', PanOnMouseUp);
-    canvas.removeEventListener('touchstart', PanOnMouseDown);
-    canvas.removeEventListener('touchmove', PanOnMouseMove);
-    canvas.removeEventListener('touchend', PanOnMouseUp);
-    canvas.removeEventListener('touchcancel', PanOnMouseUp);
-    panning = false;
+    painting = false;
+    erasing = false;
+    touching = false;
 }
 
-function PanOnMouseDown(event) {
-    pan_pivot_vector = [event.pageX - gameRect.x,event.pageY - gameRect.y]    //top left of game matrix pivots with the cursor
-    panning = true;
-}
-function PanOnMouseUp() {
-    panning = false
-}
-function PanOnMouseMove(event) {
-    if (panning) {
-        let gameRectPos = [gameRect.x,gameRect.y];
-        let mousePos = [event.pageX,event.pageY];
-        let offset = [mousePos[0]-pan_pivot_vector[0],mousePos[1]-pan_pivot_vector[1]];
+function startTouching() {touching=true;}
 
-        //keeping offset in range
-        let offsetRangeX = [0,canvas.width-gameRect.width];
-        let offsetRangeY = [0,canvas.height-gameRect.height];
-        let offsetRanges = [offsetRangeX.sort(),offsetRangeY.sort()];
-        offset.forEach(function(item,index){
-            if (item<offsetRanges[index][0]+1) {
-                this[index] = offsetRanges[index][0];
-                pan_pivot_vector[index] = mousePos[index]-gameRectPos[index]  //adjusting the pivot vector values as the gameRect didn,t move as expected according to the previous pivot values
-            }else if (item>offsetRanges[index][1]-1) {
-                this[index] = offsetRanges[index][1];
-                pan_pivot_vector[index] = mousePos[index]-gameRectPos[index];
-            }
-        },offset);
+canvas.ontouchstart = startTouching;
+canvas.ontouchend =stopHand;
+canvas.ontouchcancel = stopHand;
+canvas.onmouseup = stopHand;
+canvas.onmouseleave = stopHand;
 
-        //setting offset
-        gameRect.x = offset[0];
-        gameRect.y = offset[1];
+canvas.onmousedown = startHand;
+function startHand(event) {
+    let hand_control = document.querySelector('input[name="hand"]:checked').value;
+    if (hand_control == "pan") {
+        panning = true;
+        setPanPivot(event);
+    }else if (hand_control == "paint") {
+        painting = true;
+    }else if (hand_control == "erase") {
+        erasing = true;
     }
+    performHandControl(event);
+}
+
+canvas.onmousemove = performHandControl;
+canvas.ontouchmove = performHandControl;
+
+function performHandControl(event) {
+    if (touching) {
+        event.preventDefault();
+    }
+
+    let x_coord;
+    let y_coord;
+    if (touching) {
+        let touches = event.touches;
+        for (touch of touches) {
+            let coords = touchPoint2CanvasCoords(event,touch);
+            x_coord = coords[0];
+            y_coord = coords[1];
+
+            if (painting) {
+                paintCell(x_coord,y_coord);
+            }else if (erasing) {
+                eraseCell(x_coord,y_coord);
+            }
+        }
+        
+        let coords = touchPoint2CanvasCoords(event,touches[0]); //set touch coordinate in case you are panning
+        x_coord = coords[0];
+        y_coord = coords[1];
+    }else {
+        let coords = mousePoint2CanvasCoords(event);
+        x_coord = coords[0];
+        y_coord = coords[1];
+
+        if (painting) {
+            paintCell(x_coord,y_coord);
+        }else if (erasing) {
+            eraseCell(x_coord,y_coord);
+        }
+    }
+
+    if (panning) {
+        panGame(x_coord,y_coord);
+    }
+}
+
+//----------------------Panning Game----------------------------------------------------
+function setPanPivot(event) {
+    if (touching) {
+        let coords = touchPoint2CanvasCoords(event,event.touches[0]);
+        x_coord = coords[0];
+        y_coord = coords[1];
+    }else {
+        let coords = mousePoint2CanvasCoords(event);
+        x_coord = coords[0];
+        y_coord = coords[1];
+    }
+    pan_pivot_vector = [x_coord - gameRect.x,y_coord - gameRect.y]; //top left of game matrix pivots with the cursor
+}
+
+function panGame(x_coord,y_coord) {
+    let gameRectPos = [gameRect.x,gameRect.y];
+    let mousePos = [x_coord,y_coord];
+    let offset = [mousePos[0]-pan_pivot_vector[0],mousePos[1]-pan_pivot_vector[1]];
+
+    //keeping offset in range
+    let offsetRangeX = [0,canvas.width-gameRect.width];
+    let offsetRangeY = [0,canvas.height-gameRect.height];
+    let offsetRanges = [offsetRangeX.sort(),offsetRangeY.sort()];
+    offset.forEach(function(item,index){
+        if (item<offsetRanges[index][0]+1) {
+            this[index] = offsetRanges[index][0];
+            pan_pivot_vector[index] = mousePos[index]-gameRectPos[index]  //adjusting the pivot vector values as the gameRect didn,t move as expected according to the previous pivot values
+        }else if (item>offsetRanges[index][1]-1) {
+            this[index] = offsetRanges[index][1];
+            pan_pivot_vector[index] = mousePos[index]-gameRectPos[index];
+        }
+    },offset);
+
+    //setting offset
+    gameRect.x = offset[0];
+    gameRect.y = offset[1];
 }
 
 function panToCenter() {
@@ -226,51 +305,6 @@ function panToCenter() {
 }
 
 //----------------------------Painting Cells-------------------------------------
-let painting;
-
-function addPaintEventListeners() {
-    panning = false;
-    canvas.addEventListener('mousedown', PaintOnMouseDown);
-    canvas.addEventListener('mousemove', PaintOnMouseMove);
-    canvas.addEventListener('mouseup', PaintOnMouseUp);
-    canvas.addEventListener('mouseout', PaintOnMouseUp);
-    canvas.addEventListener('touchstart', PaintOnMouseDown);
-    canvas.addEventListener('touchmove', PaintOnMouseMove);
-    canvas.addEventListener('touchend', PaintOnMouseUp);
-    canvas.addEventListener('touchcancel', PaintOnMouseUp);
-}
-function removePaintEventListeners() {
-    canvas.removeEventListener('mousedown', PaintOnMouseDown);
-    canvas.removeEventListener('mousemove', PaintOnMouseMove);
-    canvas.removeEventListener('mouseup', PaintOnMouseUp);
-    canvas.removeEventListener('mouseout', PaintOnMouseUp);
-    canvas.removeEventListener('touchstart', PaintOnMouseDown);
-    canvas.removeEventListener('touchmove', PaintOnMouseMove);
-    canvas.removeEventListener('touchend', PaintOnMouseUp);
-    canvas.removeEventListener('touchcancel', PaintOnMouseUp);
-    painting = false;
-}
-
-function PaintOnMouseDown() {
-    painting = true;
-    let rect = event.target.getBoundingClientRect();
-    let x_coord = event.pageX - rect.left;
-    let y_coord = event.pageY - rect.top;
-    paintCell(x_coord,y_coord);
-}
-function PaintOnMouseUp() {
-    painting = false
-}
-
-function PaintOnMouseMove(event) {
-    if (painting) {
-        let rect = event.target.getBoundingClientRect();
-        let x_coord = event.pageX - rect.left;
-        let y_coord = event.pageY - rect.top;
-        paintCell(x_coord,y_coord);
-    }
-}
-
 function paintCell(x_coord,y_coord) {
     let mat_view = gameMatViewCoords();
     let gameRect2matScale = [gameMatrix[0].length/gameRect.width,gameMatrix.length/gameRect.height];
@@ -293,51 +327,6 @@ function paintCell(x_coord,y_coord) {
 }
 
 //---------------------------------Erasing Cells---------------------------
-let erasing;
-
-function addEraseEventListeners() {
-    panning = false;
-    canvas.addEventListener('mousedown', EraseOnMouseDown);
-    canvas.addEventListener('mousemove', EraseOnMouseMove);
-    canvas.addEventListener('mouseup', EraseOnMouseUp);
-    canvas.addEventListener('mouseout', EraseOnMouseUp);
-    canvas.addEventListener('touchstart', EraseOnMouseDown);
-    canvas.addEventListener('touchmove', EraseOnMouseMove);
-    canvas.addEventListener('touchend', EraseOnMouseUp);
-    canvas.addEventListener('touchcancel', EraseOnMouseUp);
-}
-function removeEraseEventListeners() {
-    canvas.removeEventListener('mousedown', EraseOnMouseDown);
-    canvas.removeEventListener('mousemove', EraseOnMouseMove);
-    canvas.removeEventListener('mouseup', EraseOnMouseUp);
-    canvas.removeEventListener('mouseout', EraseOnMouseUp);
-    canvas.removeEventListener('touchstart', EraseOnMouseDown);
-    canvas.removeEventListener('touchmove', EraseOnMouseMove);
-    canvas.removeEventListener('touchend', EraseOnMouseUp);
-    canvas.removeEventListener('touchcancel', EraseOnMouseUp);
-    erasing = false;
-}
-
-function EraseOnMouseDown(event) {
-    erasing = true;
-    let rect = event.target.getBoundingClientRect();
-    let x_coord = event.pageX - rect.left;
-    let y_coord = event.pageY - rect.top;
-    eraseCell(x_coord,y_coord);
-}
-function EraseOnMouseUp() {
-    erasing = false
-}
-
-function EraseOnMouseMove(event) {
-    if (erasing) {
-        let rect = event.target.getBoundingClientRect();
-        let x_coord = event.pageX - rect.left;
-        let y_coord = event.pageY - rect.top;
-        eraseCell(x_coord,y_coord);
-    }
-}
-
 function eraseCell(x_coord,y_coord) {
     let mat_view = gameMatViewCoords();
     let gameRect2matScale = [gameMatrix[0].length/gameRect.width,gameMatrix.length/gameRect.height];
@@ -361,21 +350,6 @@ function eraseCell(x_coord,y_coord) {
     
 
 //---------------------------Game Controls------------------------------
-function updateHandControls() {
-    removePanEventListeners();
-    removePaintEventListeners();
-    removeEraseEventListeners();
-    
-    let control = document.querySelector('input[name="hand"]:checked').value;
-    if (control == "pan") {
-        addPanEventListeners();
-    }else if (control == "paint") {
-        addPaintEventListeners();
-    }else if (control == "erase") {
-        addEraseEventListeners();
-    }
-}
-
 let run_once = false;
 let run_repeat = false;
 function gameStep() {
@@ -395,7 +369,6 @@ function gameRun() {
 //---------------------------Game Loop----------------------------------
 let fps = 60;
 draw(); //display the starting frame
-updateHandControls();
 
 let last_draw_time = Date.now();
 gameLoop();
@@ -525,9 +498,25 @@ function gameMatViewCoords() {
     return [start_coords,end_coords]
 }
 
+function touchPoint2CanvasCoords(event,event_point) {
+    let rect = event.target.getBoundingClientRect();
+    let x_coord = event_point.pageX - rect.left;
+    let y_coord = event_point.pageY - rect.top;
+
+    return [x_coord,y_coord]
+}
+function mousePoint2CanvasCoords(event) {
+    let rect = event.target.getBoundingClientRect();
+    let x_coord = event.pageX - rect.left;
+    let y_coord = event.pageY - rect.top;
+
+    return [x_coord,y_coord]
+}
+
 function getRandomColor() {return Array.from([0, 0, 0], x => (Math.random() * 255))}
 
 function rainbow() {
+    colorful = true;
     for (let row=0;row<gameMatrix.length;row++) {
         for (let col=0;col<gameMatrix[0].length;col++) {
             if (gameMatrix[row][col]!=0) {
