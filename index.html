@@ -3,6 +3,7 @@
     <head>
         <title>Game of Life</title>
         <link href="style.css" rel="stylesheet">
+        <script src="lodash.js"></script>
     </head>
     <body>
         <div id="allGame">
@@ -45,16 +46,23 @@
                     
                     <div>
                         <label for="gameZoomSlider" class="sliderControl">zoom
-                            <input id="gameZoomSlider" type="range" min="1" max="252" step="0.00001">
+                            <input id="gameZoomSlider" type="range" min="1" max="1000" step="0.00001">
                         </label>
                         <label for="gameSpeedSlider" class="sliderControl">speed
-                            <input id="gameSpeedSlider" type="range" min="0.8" max="50" step="0.000001">
+                            <input id="gameSpeedSlider" type="range" min="0.8" max="120" step="0.00001">
                         </label>
                     </div>
                 </div>
-                <script src="gameOfLife.js"></script>
             </div>
+            <div id="presetPatterns">
+                <div id="presetPatternsBox">
+                    <h1>Preset Patterns</h1>
+                    <canvas id="presetPatternCanvas"></canvas>
+                </div>
+            </div>
+            <script src="GameOfLifePatterns.js"></script>
+            <script src="gameOfLife.js"></script>
         </div> 
-        
+
     </body>
 </html>
