@@ -293,13 +293,10 @@ canvas.onmousemove = performHandControl;
 canvas.ontouchmove = performHandControl;
 
 function performHandControl(event) {
-    if (touching) {
-        event.preventDefault();
-    }
-
     let x_coord;
     let y_coord;
     if (touching) {
+        event.preventDefault();
         let touches = event.touches;
         for (touch of touches) {
             let coords = touchPoint2CanvasCoords(event,touch);
@@ -314,6 +311,8 @@ function performHandControl(event) {
                 paintCell(row,col);
             }else if (erasing) {
                 eraseCell(row,col);
+            }else if (panning) {
+                panGame(x_coord,y_coord);
             }
         }
         
@@ -333,11 +332,9 @@ function performHandControl(event) {
             paintCell(row,col);
         }else if (erasing) {
             eraseCell(row,col);
+        }else if (panning) {
+            panGame(x_coord,y_coord);
         }
-    }
-
-    if (panning) {
-        panGame(x_coord,y_coord);
     }
 }
 
@@ -488,7 +485,14 @@ function placePattern(event) {
             if (pattern[row][col]==1) {
                 let idx = [startIdx[0]+row,startIdx[1]+col]
                 makeCellAlive(idx[0],idx[1]);
-                colorsMatrix[idx[0]][idx[1]]=paint_color;
+                
+                if (colorful) {
+                    let color = getRandomColor();
+                    color = color.map(x => (x/Math.max(...color))*255);
+                    colorsMatrix[idx[0]][idx[1]] = color;
+                }else {
+                    colorsMatrix[idx[0]][idx[1]]=paint_color;
+                }
             }
         }
     }
