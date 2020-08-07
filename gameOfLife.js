@@ -36,7 +36,7 @@ const pattern_draw_width = presetsCanvas.width-(2*patternsBoxPadding);
 
 //----------------------Default Variables--------------------------------
 //gameplay
-const world_size = [300,300];
+const world_size = [350,350];
 let cell_states;
 let colorsMatrix;
 
@@ -74,7 +74,7 @@ const defaultGameSpeed = 10; //10 generations every second
 const speed_cap_min = .01;
 const speed_cap_max = 120; //the maximum value that the speed can reach, regardless of html speed slider max.
 
-const defaultZoom = 10; //see an area of 100 cells across
+const defaultZoom = 50; //see an area of 100 cells across
 const zoom_cap_min = 1;
 const zoom_cap_max = cell_states[0].length; //maximum zoom is when you can see the whole width of the game
 
@@ -112,7 +112,7 @@ if (minZoom<zoom_cap_min) {
     minZoom = zoom_cap_min;
     document.getElementById("gameZoomSlider").min = zoom_cap_min;
 }
-document.getElementById("gameZoomSlider").value = inverseExpDec(defaultZoom,minZoom,maxZoom);
+document.getElementById("gameZoomSlider").value = maxZoom-inverseExpDec(defaultZoom,minZoom,maxZoom);
 
 //game speed
 let minGameSpeed = parseFloat(document.getElementById("gameSpeedSlider").min);
@@ -131,16 +131,16 @@ document.getElementById("gameSpeedSlider").value = speedSliderPoint(defaultGameS
 //------------------Game Speed slider Logarithmic Control---------------------
 //currently no logarithmic game speed slider control
 function gameSpeed() {
-    return parseFloat(document.getElementById("gameSpeedSlider").value);
+    return expDecrement(parseFloat(document.getElementById("gameSpeedSlider").value),minGameSpeed,maxGameSpeed);
 }
 
 function speedSliderPoint(value) {
-    return value
+    return inverseExpDec(value,minGameSpeed,maxGameSpeed)
 }
 
 //-----------------------Zooming Game---------------------
 function zoom() {   //zoom based on value of zoom slider
-    let z_unit = expDecrement(parseFloat(document.getElementById("gameZoomSlider").value),minZoom,maxZoom);//for zooming by smaller increments as we zoom in closer
+    let z_unit = expDecrement(maxZoom-parseFloat(document.getElementById("gameZoomSlider").value),minZoom,maxZoom);//for zooming by smaller increments as we zoom in closer
     let zoom_ratio = calcZoomRatio(z_unit)
     let new_width = canvas.width*(1/zoom_ratio);
     let new_height = (cell_states.length/cell_states[0].length)*new_width;
@@ -207,7 +207,6 @@ function nextGeneration() {
         }
     }
     cell_states = nextGen;
-    requestAnimFrame()
 }
 
 function computeColor(row,col) {
@@ -239,6 +238,15 @@ function computeColor(row,col) {
     
     colorsMatrix[row][col] = color;
 }
+
+//Rotate Preset Patterns
+function rotatePatterns() {
+    for (let i=0;i<presetPatterns.length;i++) {
+        presetPatterns[i].space_needed = presetPatterns[i].space_needed.reverse();
+        presetPatterns[i].start_pattern = rotateLeft(presetPatterns[i].start_pattern);
+    }
+}
+
 
 //-------------------------Hand Controls-----------------------
 let touching;
@@ -888,14 +896,13 @@ function makeCellDead(row,col) {
 
 let lastCalledTime;
 
-function requestAnimFrame() {
-
-  if(!lastCalledTime) {
-     lastCalledTime = Date.now();
-     fps = 0;
-     return;
-  }
-  delta = (Date.now() - lastCalledTime)/1000;
-  lastCalledTime = Date.now();
-  console.log(1/delta)
+function rotateLeft(array) {
+    var result = [];
+    array.forEach(function (a, i, aa) {
+        a.forEach(function (b, j, bb) {
+            result[j] = result[j] || [];
+            result[j][aa.length - i - 1] = b;
+        });
+    });
+    return result;
 }
