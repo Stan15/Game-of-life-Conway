@@ -1,6 +1,20 @@
-let canvas = document.getElementById('gameOfLifeCanvas');
+//----------------Preset Patterns-------------------
+const pattern_draw_height = 100;
+const patternsBoxPadding = 10;
+const pattern_name_height = 20;
+
+let presetPatterns = _.cloneDeep(GameOfLifePresetPatterns);
+
+let current_y_coord = 0;
+for (let i=0;i<presetPatterns.length;i++) {
+    presetPatterns[i].y_coord = current_y_coord;
+    current_y_coord = current_y_coord + (patternsBoxPadding+pattern_name_height+patternsBoxPadding+pattern_draw_height+patternsBoxPadding);
+}
+
+//------------------------------------------------
+const canvas = document.getElementById('gameOfLifeCanvas');
+const ctx = canvas.getContext('2d');
 resizeCanvas();
-let ctx = canvas.getContext('2d');
 
 function resizeCanvas() {
     let parent_rect = canvas.parentNode.getBoundingClientRect();
@@ -8,110 +22,66 @@ function resizeCanvas() {
     canvas.width = parent_rect.width;
 }
 
-world_size = [250,250];
-let gameMatrix;
+const presetsCanvas = document.getElementById('presetPatternCanvas');
+const presetsCtx = presetsCanvas.getContext('2d');
+
+resizePresetsCanvas()
+function resizePresetsCanvas() {
+    let parent_rect = presetsCanvas.parentNode.getBoundingClientRect();
+    presetsCanvas.width = parent_rect.width-25;
+    presetsCanvas.height = presetPatterns.length*(patternsBoxPadding+pattern_name_height+patternsBoxPadding+pattern_draw_height+patternsBoxPadding);
+}
+
+const pattern_draw_width = presetsCanvas.width-(2*patternsBoxPadding);
+
+//----------------------Default Variables--------------------------------
+//gameplay
+const world_size = [300,300];
+let cell_states;
 let colorsMatrix;
-let selectMatrix;
+
+let lifespan = false;
+let cell_lifespan = 1; //each cell lives only for 1 generations
+
+const default_cell_color = [255,255,255];
+let colorful;
+let paint_color = default_cell_color;
+
+//initialising empty state
 clearWorld()
 function clearWorld() {
-    gameMatrix = Array(world_size[0]).fill(0).map(item =>(new Array(world_size[1]).fill(0)));
-    colorsMatrix = Array(world_size[0]).fill(0).map(item=>(new Array(world_size[1]).fill(0)).map(item=>Array(3).fill(0)));
-    clearSelect();
+    colorful = false;
+    cell_states = Array(world_size[0]).fill(0).map(item =>(new Array(world_size[1]).fill('000'))); //in the '000', first 0 is cell state 'dead', second is neighbor count, and third is if the cell is currently selected
+    colorsMatrix = Array(cell_states.length).fill(0).map(item=>(new Array(cell_states[0].length).fill(0)).map(item=>[0,0,0]));
 }
 
-function clearSelect() {
-    selectMatrix = Array(world_size[0]).fill(0).map(item =>(new Array(world_size[1]).fill(0)));
-}
+//game objects
+const gridline_width = 1;
+const cell_size_perc = 0.90;
+const select_size_perc = 0.95;
+const cell_rounded = 0.1;
 
-//--------------------Game Customisation-------------------------------------------------
-let lifespan = false;
-let cell_lifespan = 10; //each cell lives only for 10 generations
+const bg_color = 'rgba(0,0,0,1)';
+const gridline_color = '#ffffff00';
+const select_alpha = .3;
+const canPlace_color = 'rgba(0,255,0,'+select_alpha+')';  //color of hover if you can place a pattern in an area
+const noPlace_color = 'rgba(255,0,0,'+select_alpha+')';
 
-let gridline_width = 1;
-let cell_size_perc = 0.85; //max is 1. if max, it occupies all of the grid cell it's in
-let select_size_perc = 0.95;
+const presetSelectColor = 'rgba(150,150,255,0.5)';
 
+//game controls
+const defaultGameSpeed = 10; //10 generations every second
+const speed_cap_min = .01;
+const speed_cap_max = 120; //the maximum value that the speed can reach, regardless of html speed slider max.
 
-let colorful = false;
-let default_cell_color = [255,255,255];
-let paint_color = [255,255,255];
-let bg_color = 'rgb(0,0,0)';
-let gridline_color = '#ffffff10';
-let select_alpha = 0.3;
-let select_yes_color = 'rgb(118,255,3'+select_alpha+')';
-let select_no_color = 'rgb(244,67,54'+select_alpha+')';
+const defaultZoom = 10; //see an area of 100 cells across
+const zoom_cap_min = 1;
+const zoom_cap_max = cell_states[0].length; //maximum zoom is when you can see the whole width of the game
 
-let zoom_slider_exp = 2;    //has to be greater or equal to 1
-
-let speed_cap_max = 30; //the maximum value that the speed can reach, regardless of html speed slider max.
-let speed_cap_min = 0.01;
-
-let defaultGameSpeed = 5; //2 generation passes every second
-let defaultZoom = 100;  //zoom in to see a 100*100 cells space. unit = percentage
-let zoom_cap_min = 1;   //zoom in cap when zooming closer than one cell.
-let zoom_cap_max = 400;
-
-//---------------------Game Brains-------------------------------------------------------
-function nextGeneration() {
-    let nextGen = JSON.parse(JSON.stringify(gameMatrix));
-    let nextColorMat = JSON.parse(JSON.stringify(colorsMatrix));
-    let ones_zeros = [-1,0,1];
-
-    for (let row=0;row<gameMatrix.length;row++) {
-        for (let col=0;col<gameMatrix[0].length;col++) {
-            let neighbor_count = 0;
-
-            let cell_color;
-            if (colorful) {
-                cell_color = colorsMatrix[row][col];
-                cell_color = cell_color.map(x => Math.pow(x,2));
-            }else {
-                cell_color = default_cell_color;
-            }
-            ones_zeros.forEach(i => {
-                ones_zeros.forEach(j => {
-                    if ((row+i>=0)&&(col+j>=0)&&(row+i<gameMatrix.length)&&(col+j<gameMatrix[0].length) && !(i==0 && j==0) && (gameMatrix[row+i][col+j]!=0)) {
-                        neighbor_count = neighbor_count + 1;
-                        if (colorful) {
-                            let neighbor_color = colorsMatrix[row+i][col+j];
-                            cell_color[0] = cell_color[0]+Math.pow(neighbor_color[0],2);
-                            cell_color[1] = cell_color[1]+Math.pow(neighbor_color[1],2);
-                            cell_color[2] = cell_color[2]+Math.pow(neighbor_color[2],2);
-                        }
-                    }
-                })
-            });
-
-            if (colorful) {
-                cell_color = cell_color.map(x => Math.pow(x/(neighbor_count+1),0.5));
-                let max_color_val = Math.max(...cell_color);
-                cell_color = cell_color.map(x => (x/max_color_val)*255);
-            }
-
-            let cell_state = gameMatrix[row][col];
-            if (cell_state==0) {
-                if (neighbor_count==0) {continue}
-                if(neighbor_count==3) {
-                    nextGen[row][col] = 1;
-                }
-            }else {
-                if ((neighbor_count<2)||(neighbor_count>3)||(cell_state>cell_lifespan)*(lifespan)) {
-                    nextGen[row][col] = 0;
-                }else {
-                    nextGen[row][col] = cell_state + (1*lifespan);
-                }
-            }
-            nextColorMat[row][col] = cell_color;
-        }
-    }
-    gameMatrix = JSON.parse(JSON.stringify(nextGen));
-    colorsMatrix = JSON.parse(JSON.stringify(nextColorMat));
-}
-
-//----------------------Setting Defaults-------------------------------
-for (let i=0;i<gameMatrix[0].length;i++) {
-    gameMatrix[i][i] = 1;
-    gameMatrix[i][world_size[1]-1-i] = 1;
+//--------------------------Setting Defaults------------------
+for (let i=0;i<cell_states[0].length;i++) {
+    makeCellAlive(i,i);
+    makeCellAlive(i,world_size[1]-1-i);
     colorsMatrix[i][i] = default_cell_color;
     colorsMatrix[i][world_size[1]-1-i] = default_cell_color;
 }
@@ -120,9 +90,16 @@ let gameRect = {
     x: 0,
     y: 0,
     width: canvas.width*(1/calcZoomRatio(defaultZoom)), //100% zoom means the game width is equal to the canvas width
-    height: (gameMatrix.length/gameMatrix[0].length)*canvas.width*(1/calcZoomRatio(defaultZoom)) //  game height/game width equals gameMatrix height/gameMatrix width
+    height: (cell_states.length/cell_states[0].length)*canvas.width*(1/calcZoomRatio(defaultZoom)) //  game height/game width equals cell_states height/cell_states width
 }
 panToCenter();  //pan the view to the center cells of the game matrix
+
+//preset patterns window
+let selectingPattern = {
+    patternSelected: false, //do we have a pattern selected?
+    pattern: undefined, //the pattern that is selected
+    canPlacePattern: false, //do we have enough space around the current mouse position to place the pattern?
+};
 
 //zoom
 let minZoom = parseFloat(document.getElementById("gameZoomSlider").min);
@@ -135,7 +112,7 @@ if (minZoom<zoom_cap_min) {
     minZoom = zoom_cap_min;
     document.getElementById("gameZoomSlider").min = zoom_cap_min;
 }
-document.getElementById("gameZoomSlider").value = inverseExpInc(defaultZoom,minZoom,maxZoom,zoom_slider_exp);
+document.getElementById("gameZoomSlider").value = inverseExpDec(defaultZoom,minZoom,maxZoom);
 
 //game speed
 let minGameSpeed = parseFloat(document.getElementById("gameSpeedSlider").min);
@@ -151,7 +128,8 @@ if (minGameSpeed<speed_cap_min) {
 }
 document.getElementById("gameSpeedSlider").value = speedSliderPoint(defaultGameSpeed);
 
-//------------------------------------Game Speed------------------------------------------
+//------------------Game Speed slider Logarithmic Control---------------------
+//currently no logarithmic game speed slider control
 function gameSpeed() {
     return parseFloat(document.getElementById("gameSpeedSlider").value);
 }
@@ -160,14 +138,12 @@ function speedSliderPoint(value) {
     return value
 }
 
-//----------------------Zooming Game----------------------------------------------------
-function zoom_unit() {
-    return expIncrement(maxZoom-parseFloat(document.getElementById("gameZoomSlider").value),minZoom,maxZoom,zoom_slider_exp);
-}
-function zoom(z_unit) {
+//-----------------------Zooming Game---------------------
+function zoom() {   //zoom based on value of zoom slider
+    let z_unit = expDecrement(parseFloat(document.getElementById("gameZoomSlider").value),minZoom,maxZoom);//for zooming by smaller increments as we zoom in closer
     let zoom_ratio = calcZoomRatio(z_unit)
     let new_width = canvas.width*(1/zoom_ratio);
-    let new_height = (gameMatrix.length/gameMatrix[0].length)*new_width;
+    let new_height = (cell_states.length/cell_states[0].length)*new_width;
 
     let zoom_pivot_vector = [(canvas.width/2)-gameRect.x,(canvas.height/2)-gameRect.y]; //pivots center of canvas to top left of gameRect
     let scale_pivot_factor = [new_width/gameRect.width,new_height/gameRect.height];
@@ -180,13 +156,99 @@ function zoom(z_unit) {
     gameRect.width = new_width;
 }
 
-//-----------------------------Hand Controls--------------------------------------------
+
+//------------------Game Brain-----------------------
+function nextGeneration() {
+    let nextGen = _.cloneDeep(cell_states);
+
+    ones_zeros = [-1,0,1];
+    for (let row=0;row<cell_states.length;row++) {
+        for (let col=0;col<cell_states[0].length;col++) {
+            let state = cell_states[row][col];
+            let alive = state[0];
+            let nbor_count = state[1];
+
+            if (alive=='1' && ['2','3'].includes(nbor_count)) {
+                if (colorful && nbor_count!='0') {computeColor(row,col);}
+                continue
+            }
+            if (alive=='0' && nbor_count!='3') {continue}
+
+            let cell_born = false;
+            let cell_dies = false;
+            if (alive=='0') {
+                cell_born = true;
+                nextGen[row][col] = '1'+nextGen[row][col][1]+nextGen[row][col][2];
+            }else {
+                cell_dies = true;
+                nextGen[row][col] = '0'+nextGen[row][col][1]+nextGen[row][col][2];
+            }
+
+            for (let i=0;i<3;i++) {
+                for (let j=0;j<3;j++) {
+                    let row_offset = ones_zeros[i];
+                    let col_offset = ones_zeros[j];
+                    nIdx = [row+row_offset,col+col_offset];   //index of neighboring cell
+                    if (nIdx[0]<0 || nIdx[1]<0 || nIdx[0]>=cell_states.length || nIdx[1]>=cell_states[0].length) {continue}
+                    nbor_state = nextGen[nIdx[0]][nIdx[1]];
+                    if (!(row_offset==0 && col_offset==0)) {    //if this is actually a neighboring cell and not the original cell
+                        if (cell_born) {
+                            nextGen[nIdx[0]][nIdx[1]] = nbor_state[0]+(parseInt(nbor_state[1])+1)+nbor_state[2];
+                        }else {
+                            nextGen[nIdx[0]][nIdx[1]] = nbor_state[0]+(parseInt(nbor_state[1])-1)+nbor_state[2];
+                        }
+                    }
+                }
+            }
+
+            if (colorful && cell_born && nextGen[row][col][1]!='0') {
+                computeColor(row,col);
+            }
+        }
+    }
+    cell_states = nextGen;
+    requestAnimFrame()
+}
+
+function computeColor(row,col) {
+    let color = [0,0,0];
+    let neighbor_count = 0;
+    for (let i=0;i<3;i++) {
+        for (let j=0;j<3;j++) {
+            let nRow = row+ones_zeros[i];
+            let nCol = col+ones_zeros[j];
+            if (nRow<0 || nCol<0 || nRow>=cell_states.length || nCol>=cell_states[0].length) {continue}
+            if (cell_states[nRow][nCol][0]!='1') {continue}
+            let nbor_colr = colorsMatrix[nRow][nCol];
+            color = color.map((colr,idx) => {
+                return colr+Math.pow(nbor_colr[idx],2);
+            });
+            neighbor_count = neighbor_count + 1;
+        }
+    }
+    color = color.map(x => Math.pow(x/(neighbor_count),0.5));
+    color = color.map(x => (x/Math.max(...color))*255);
+
+    let chances = [...new Array(999).fill(0),1];
+    let num = chances[Math.floor(Math.random() * chances.length)];
+
+    if (num==1) {
+        color = getRandomColor();
+        color = color.map(x => (x/Math.max(...color))*255);
+    }
+    
+    colorsMatrix[row][col] = color;
+}
+
+//-------------------------Hand Controls-----------------------
 let touching;
 
-let pan_pivot_vector;
 let panning;
 let painting;
 let erasing;
+
+let pan_pivot_vector;
+
 stopHand();
 function stopHand() {
     panning = false;
@@ -195,7 +257,7 @@ function stopHand() {
     touching = false;
 }
 
-function startTouching() {touching=true;}
+function startTouching() {touching = true;}
 
 canvas.ontouchstart = startTouching;
 canvas.ontouchend =stopHand;
@@ -203,8 +265,10 @@ canvas.ontouchcancel = stopHand;
 canvas.onmouseup = stopHand;
 canvas.onmouseleave = stopHand;
 
+canvas.onclick = placePattern;
+
 canvas.onmousedown = startHand;
-function startHand(event) {
+function startHand() {
     let hand_control = document.querySelector('input[name="hand"]:checked').value;
     if (hand_control == "pan") {
         panning = true;
@@ -233,11 +297,15 @@ function performHandControl(event) {
             let coords = touchPoint2CanvasCoords(event,touch);
             x_coord = coords[0];
             y_coord = coords[1];
-
-            if (painting) {
-                paintCell(x_coord,y_coord);
+            let row, col;
+            [row,col] = canvasCoords2matIdx(x_coord,y_coord);
+            if (selectingPattern.patternSelected) {
+                selectAnimation(row,col);
+                break
+            }else if (painting) {
+                paintCell(row,col);
             }else if (erasing) {
-                eraseCell(x_coord,y_coord);
+                eraseCell(row,col);
             }
         }
         
@@ -248,11 +316,15 @@ function performHandControl(event) {
         let coords = mousePoint2CanvasCoords(event);
         x_coord = coords[0];
         y_coord = coords[1];
+        let row, col;
+        [row,col] = canvasCoords2matIdx(x_coord,y_coord);
 
-        if (painting) {
-            paintCell(x_coord,y_coord);
+        if (selectingPattern.patternSelected) {
+            selectAnimation(row,col);
+        }else if (painting) {
+            paintCell(row,col);
         }else if (erasing) {
-            eraseCell(x_coord,y_coord);
+            eraseCell(row,col);
         }
     }
 
@@ -261,7 +333,40 @@ function performHandControl(event) {
     }
 }
 
-//----------------------Panning Game----------------------------------------------------
+//preset patterns canvas
+presetsCanvas.addEventListener('click',function() {
+    [x_coord,y_coord] = mousePoint2CanvasCoords(event);
+    for (let i=0;i<presetPatterns.length;i++) {
+        let pattern = presetPatterns[i];
+        
+        let patternIsClicked = false;
+        let patternAlreadySelected = false;
+        if (y_coord>=pattern.y_coord+patternsBoxPadding && y_coord<=pattern.y_coord+patternsBoxPadding+pattern_name_height+patternsBoxPadding+pattern_draw_height) {
+            patternIsClicked = true;
+            if (pattern.selected) {
+                patternAlreadySelected = true;
+            }
+        }
+
+        if (patternIsClicked) {
+            if (patternAlreadySelected) {
+                selectingPattern.patternSelected = false;
+                presetPatterns[i].selected = false;
+                selectingPattern.pattern = undefined;
+            }else {
+                for (let j=0;j<presetPatterns.length;j++) {
+                    presetPatterns[j].selected = false;
+                }
+                presetPatterns[i].selected = true;
+                selectingPattern.patternSelected = true;
+                selectingPattern.pattern = presetPatterns[i];
+            }
+            break
+        }
+    }
+});
+
+//-------------------Panning game
 function setPanPivot(event) {
     if (touching) {
         let coords = touchPoint2CanvasCoords(event,event.touches[0]);
@@ -304,52 +409,107 @@ function panToCenter() {
     gameRect.y = (canvas.height-gameRect.height)/2;
 }
 
-//----------------------------Painting Cells-------------------------------------
-function paintCell(x_coord,y_coord) {
-    let mat_view = gameMatViewCoords();
-    let gameRect2matScale = [gameMatrix[0].length/gameRect.width,gameMatrix.length/gameRect.height];
-    let col = Math.floor((gameRect2matScale[0]*x_coord)+mat_view[0][0]);
-    let row = Math.floor((gameRect2matScale[1]*y_coord)+mat_view[0][1]);
-    if (row>gameMatrix.length-1) {
-        row=gameMatrix.length-1;
+//----------------------Painting Cells-------------------
+function paintCell(row,col) {
+    if (row>=cell_states.length) {
+        row = cell_states.length-1;
     }else if (row<0) {
         row = 0;
     }
-    if (col>gameMatrix[0].length-1) {
-        col=gameMatrix[0].length-1;
-    }else if (col<0) {
-        col = 0;
-    }
-    if (gameMatrix[row][col]==0) {
-        gameMatrix[row][col]=1;
-        colorsMatrix[row][col]=paint_color;
-    }
-}
-
-//---------------------------------Erasing Cells---------------------------
-function eraseCell(x_coord,y_coord) {
-    let mat_view = gameMatViewCoords();
-    let gameRect2matScale = [gameMatrix[0].length/gameRect.width,gameMatrix.length/gameRect.height];
-    let col = Math.floor((gameRect2matScale[0]*x_coord)+mat_view[0][0]);
-    let row = Math.floor((gameRect2matScale[1]*y_coord)+mat_view[0][1]);
-    if (row>gameMatrix.length-1) {
-        row=gameMatrix.length-1;
-    }else if (row<0) {
-        row = 0;
-    }
-    if (col>gameMatrix[0].length-1) {
-        col=gameMatrix[0].length-1;
-    }else if (col<0) {
-        col = 0;
-    }
-    if (gameMatrix[row][col]!=0) {
-        gameMatrix[row][col]=0;
-        colorsMatrix[row][col]=[0,0,0];
-    }
-}
     
+    if (col>=cell_states[0].length) {
+        col=cell_states[0].length-1;
+    }else if (col<0) {
+        col = 0;
+    }
 
-//---------------------------Game Controls------------------------------
+    if (cell_states[row][col][0]=='0') {
+        makeCellAlive(row,col);
+        colorsMatrix[row][col] = paint_color;
+    }
+}
+
+//-------------------------Erasing Cells----------------
+function eraseCell(row,col) {
+    if (row>=cell_states.length) {
+        row = cell_states.length-1;
+    }else if (row<0) {
+        row = 0;
+    }
+    
+    if (col>=cell_states[0].length) {
+        col=cell_states[0].length-1;
+    }else if (col<0) {
+        col = 0;
+    }
+
+    if (cell_states[row][col][0]!='0') {
+        makeCellDead(row,col);
+        colorsMatrix[row][col] = [0,0,0];
+    }
+}
+
+//--------------Placing Pattern--------------------------
+function placePattern(event) {
+    if (!selectingPattern.patternSelected) {return}
+    let row;
+    let col;
+
+    let event_type = event.type;
+    if (event_type=='touchmove') {
+        let coords = touchPoint2CanvasCoords(event,event.touches[0]);
+        x_coord = coords[0];
+        y_coord = coords[1];
+    }else if (event.type=='mousemove' || event_type=='click') {
+        let coords = mousePoint2CanvasCoords(event);
+        x_coord = coords[0];
+        y_coord = coords[1];
+    }else {return}
+    [row,col] = canvasCoords2matIdx(x_coord,y_coord);
+    selectAnimation(row,col);
+
+    if (!selectingPattern.canPlacePattern){return}
+
+    let pattern = selectingPattern.pattern.start_pattern;
+    let patternSize = [pattern.length,pattern[0].length];
+    let startIdx = [Math.floor(row-((patternSize[0]-1)/2)),Math.floor(col-((patternSize[1]-1)/2))];
+
+    //adjusting neighbor count
+    for (let row=0;row<patternSize[0];row++) {
+        for (let col=0;col<patternSize[1];col++) {
+            if (pattern[row][col]==1) {
+                let idx = [startIdx[0]+row,startIdx[1]+col]
+                makeCellAlive(idx[0],idx[1]);
+                colorsMatrix[idx[0]][idx[1]]=paint_color;
+            }
+        }
+    }
+}
+
+function selectAnimation(row,col) {
+    cell_states = cell_states.map(row =>(row.map(col =>(col.slice(0,2)+'0'))));   //for all states 'xyz' in cell_states, set z=0
+
+    let space_needed = selectingPattern.pattern.space_needed;
+    let startIdx = [Math.floor(row-((space_needed[0]-1)/2)),Math.floor(col-((space_needed[1]-1)/2))];
+    let endIdx = [Math.floor(row+((space_needed[0]-1)/2)),Math.floor(col+((space_needed[1]-1)/2))];
+
+    canPlace = true;
+    for (let i=startIdx[0];i<=endIdx[0];i++) {
+        for (let j=startIdx[1];j<=endIdx[1];j++) {
+            if (i<0 || j<0 || i>=cell_states.length || j>=cell_states[0].length) {
+                canPlace = false;
+            }else {
+                cell_states[i][j] = cell_states[i][j].slice(0,2)+'1';
+                if (cell_states[i][j][0]!='0') {
+                    canPlace = false;
+                }
+            }
+        }
+    }
+    selectingPattern.canPlacePattern = canPlace;
+}
+
+//------------------------Running Game------------------------
 let run_once = false;
 let run_repeat = false;
 function gameStep() {
@@ -366,7 +526,7 @@ function gameRun() {
     }
 }
 
-//---------------------------Game Loop----------------------------------
+//---------------------------Game Loop-------------------------
 let fps = 60;
 draw(); //display the starting frame
 
@@ -374,15 +534,15 @@ let last_draw_time = Date.now();
 gameLoop();
 function gameLoop() {
     if (run_once) {
-        run_once = false; run_repeat = false;
+        run_once = false;run_repeat = false;
         nextGeneration();
         last_draw_time = Date.now();
     }else if (run_repeat) {
         let game_speed = gameSpeed();
         let current_time = Date.now();
         let elapsed = current_time-last_draw_time;
-        
-        if (elapsed >= (1000/game_speed)) {
+
+        if (elapsed>=(1000/game_speed)) {
             last_draw_time = current_time;
             nextGeneration();
         }
@@ -391,17 +551,23 @@ function gameLoop() {
     setTimeout(function() {
         requestAnimationFrame(gameLoop);
       }, 1000/fps);
+    
 }
 
-//-----------------------------------Drawing----------------------------------------------------
+
+//---------------------------Drawing------------------------
 function draw() {
-    zoom(zoom_unit());
+    zoom();
     let game_view_range = gameMatViewCoords();
 
+    //background
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = bg_color;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     drawGrid(game_view_range);
     drawCellsAndSelect(game_view_range);
+    drawPresetPatterns()
 }
 
 function drawGrid(game_view_range) {
@@ -412,7 +578,7 @@ function drawGrid(game_view_range) {
     let game_view_start = game_view_range[0];
     let game_view_end = game_view_range[1];
 
-    let mat2canvasScale = [gameRect.width/gameMatrix[0].length,gameRect.height/gameMatrix.length];
+    let mat2canvasScale = [gameRect.width/cell_states[0].length,gameRect.height/cell_states.length];
     for (let i=game_view_start[0];i<game_view_end[0];i++) {
         i = Math.floor(i);
         let x_coord = gameRect.x+(i*mat2canvasScale[0]);
@@ -434,42 +600,135 @@ function drawGrid(game_view_range) {
 
 function drawCellsAndSelect(game_view_range) {
     ctx.save();
-
     let game_view_start = game_view_range[0];
     let game_view_end = game_view_range[1];
 
-    let mat2canvasScale = [gameRect.width/gameMatrix[0].length,gameRect.height/gameMatrix.length];
+    let mat2canvasScale = [gameRect.width/cell_states[0].length,gameRect.height/cell_states.length];
     let grid_cell_size = [mat2canvasScale[0]*1,mat2canvasScale[1]*1];
     let cell_size = [grid_cell_size[0]*cell_size_perc,grid_cell_size[1]*cell_size_perc];   //how much of one grid cell does a cell occupy
-    let rounded_radius = 0.1*cell_size[0];
+    let select_cell_size = [grid_cell_size[0]*select_size_perc,grid_cell_size[1]*select_size_perc];
+    let rounded_radius = cell_rounded*cell_size[0];
 
-    let select_size = [grid_cell_size[0]*select_size_perc,grid_cell_size[1]*select_size_perc];
-    
     for(let row=game_view_start[1];row<game_view_end[1];row++) {
         for(let col=game_view_start[0];col<game_view_end[0];col++) {
             row = Math.floor(row);
             col = Math.floor(col);
-            if (row>gameMatrix.length || col>gameMatrix[0].length) {
+            if (row>=cell_states.length || col>=cell_states[0].length) {
                 continue
             }
-            if (gameMatrix[row][col]!=0) {
+            if (cell_states[row][col][0]!='0') {
                 let x_coord = gameRect.x+(col*mat2canvasScale[0])+((grid_cell_size[0]-cell_size[0])/2);
                 let y_coord = gameRect.y+(row*mat2canvasScale[1])+((grid_cell_size[1]-cell_size[1])/2);
-                ctx.beginPath();
-                let color = colorsMatrix[row][col];
+
+                let color
+                if (colorful) {
+                    color = colorsMatrix[row][col];
+                }else {
+                    color = default_cell_color;
+                }
                 ctx.fillStyle = 'rgb('+color[0]+','+color[1]+','+color[2]+')';
-                roundedRectangle(x_coord, y_coord,cell_size[0],cell_size[1],rounded_radius);
-                ctx.fill();
+                if (cell_rounded==0) {
+                    ctx.fillRect(x_coord, y_coord,cell_size[0],cell_size[1]);
+                }else {
+                    ctx.beginPath();
+                    roundedRectangle(ctx,x_coord, y_coord,cell_size[0],cell_size[1],rounded_radius);
+                    ctx.fill();
+                }
+            }
+            if (selectingPattern.patternSelected) {
+                if (cell_states[row][col][2]!='0') {
+                    let x_coord = gameRect.x+(col*mat2canvasScale[0])+((grid_cell_size[0]-select_cell_size[0])/2);
+                    let y_coord = gameRect.y+(row*mat2canvasScale[1])+((grid_cell_size[1]-select_cell_size[1])/2);
+
+                    if (selectingPattern.canPlacePattern) {
+                        ctx.fillStyle = canPlace_color;
+                    }else {
+                        ctx.fillStyle = noPlace_color;
+                    }
+                    ctx.beginPath();
+                    roundedRectangle(ctx,x_coord, y_coord,select_cell_size[0],select_cell_size[1],rounded_radius);
+                    ctx.fill();
+                }
             }
         }
     }
-
     ctx.restore();
 }
 
-//---------------------------Minor Function----------------------------------------------
-function gameMatViewCoords() {
-    let canvas2matScale = [gameMatrix[0].length/gameRect.width,gameMatrix.length/gameRect.height];
+function drawPresetPatterns() {
+    presetsCtx.save();
+    presetsCtx.fillStyle = bg_color;
+    presetsCtx.clearRect(0, 0, presetsCanvas.width, presetsCanvas.clientHeight)
+    presetsCtx.fillRect(0, 0, presetsCanvas.width, presetsCanvas.clientHeight);
+
+    for (let i=0;i<presetPatterns.length;i++) {
+        let pattern = presetPatterns[i];
+        let current_y = pattern.y_coord + patternsBoxPadding;
+
+        presetsCtx.font = "15px Arial";
+        presetsCtx.fillStyle = 'white';
+        presetsCtx.textBaseline = 'top';
+        presetsCtx.fillText(pattern.name, 5, current_y);
+        current_y = current_y + pattern_name_height + patternsBoxPadding;
+
+        let start_pattern = pattern.start_pattern;
+
+        let mat2canvasScale = pattern_draw_height/start_pattern.length;
+        let x_offset = patternsBoxPadding;
+        let y_offset = pattern.y_coord + (2*patternsBoxPadding) + pattern_name_height;
+
+        if (start_pattern.length>start_pattern[0].length) {
+            mat2canvasScale = pattern_draw_height/start_pattern.length;
+            if ((start_pattern[0].length*mat2canvasScale)>pattern_draw_width) {
+                mat2canvasScale = pattern_draw_width/start_pattern[0].length;
+            }
+        }else if (start_pattern.length<start_pattern[0].length) {
+            mat2canvasScale = pattern_draw_width/start_pattern[0].length;
+            if ((start_pattern.length*mat2canvasScale)>pattern_draw_height) {
+                mat2canvasScale = pattern_draw_height/start_pattern.length;
+            }
+        }
+        x_offset = x_offset+(pattern_draw_width-(mat2canvasScale*start_pattern[0].length))/2;
+        y_offset = y_offset+(pattern_draw_height-(mat2canvasScale*start_pattern.length))/2;
+        
+        let grid_cell_size = mat2canvasScale*1;
+        let cell_size = cell_size_perc*grid_cell_size;
+        let rounded_radius = 0.1*cell_size;
+
+        for (let row=0;row<start_pattern.length;row++) {
+            for (let col=0;col<start_pattern[0].length;col++) {
+                if(start_pattern[row][col]!=0) {
+                    let x_coord = x_offset+(col*mat2canvasScale);
+                    let y_coord = y_offset+(row*mat2canvasScale);
+
+                    presetsCtx.beginPath();
+                    presetsCtx.fillStyle = 'rgb('+default_cell_color[0]+','+default_cell_color[1]+','+default_cell_color[2]+')';
+                    roundedRectangle(presetsCtx,x_coord, y_coord,cell_size,cell_size,rounded_radius);
+                    presetsCtx.fill();
+                }
+            }
+        }
+
+        
+        if (pattern.selected) {
+            presetsCtx.beginPath();
+            presetsCtx.fillStyle = 'rgba(0,0,0,0.3)';
+            roundedRectangle(presetsCtx,patternsBoxPadding,pattern.y_coord + (2*patternsBoxPadding) + pattern_name_height,pattern_draw_width,pattern_draw_height,0.01*(pattern_draw_width));
+            presetsCtx.fill()
+            presetsCtx.fillStyle = presetSelectColor;
+            roundedRectangle(presetsCtx,patternsBoxPadding,pattern.y_coord + (2*patternsBoxPadding) + pattern_name_height,pattern_draw_width,pattern_draw_height,0.01*(pattern_draw_width));
+            presetsCtx.fill();
+        }
+
+        current_y = current_y + pattern_draw_height + patternsBoxPadding;
+    }
+    presetsCtx.restore();
+}
+
+
+//----------------------Minor Functions-------------------------
+function gameMatViewCoords() {  //returns the start and end indices defining the all the cells that the player is currently viewing on the canvas. purpose: for optimising speed, only drawing visible elements to screen.
+    let canvas2matScale = [cell_states[0].length/gameRect.width,cell_states.length/gameRect.height];
     let start_coords = [];
     let end_coords = [];
 
@@ -488,11 +747,11 @@ function gameMatViewCoords() {
         end_coords[1] = start_coords[1]+(canvas.height*canvas2matScale[1]);
     }
 
-    if (end_coords[0]>gameMatrix[0].length) {
-        end_coords[0] = gameMatrix[0].length;
+    if (end_coords[0]>cell_states[0].length) {
+        end_coords[0] = cell_states[0].length;
     }
-    if (end_coords[1]>gameMatrix.length) {
-        end_coords[1] = gameMatrix.length;
+    if (end_coords[1]>cell_states.length) {
+        end_coords[1] = cell_states.length;
     }
 
     return [start_coords,end_coords]
@@ -513,22 +772,35 @@ function mousePoint2CanvasCoords(event) {
     return [x_coord,y_coord]
 }
 
+function canvasCoords2matIdx(x_coord,y_coord) {
+    let mat_view = gameMatViewCoords();
+    let canvas2matScale = [cell_states[0].length/gameRect.width,cell_states.length/gameRect.height];
+    let col = Math.floor((canvas2matScale[0]*x_coord)+mat_view[0][0]);
+    let row = Math.floor((canvas2matScale[1]*y_coord)+mat_view[0][1]);
+
+    return [row,col]
+}
+
 function getRandomColor() {return Array.from([0, 0, 0], x => (Math.random() * 255))}
 
 function rainbow() {
-    colorful = true;
-    for (let row=0;row<gameMatrix.length;row++) {
-        for (let col=0;col<gameMatrix[0].length;col++) {
-            if (gameMatrix[row][col]!=0) {
-                let color = getRandomColor();
-                color = color.map(x => (x/Math.max(...color))*255);
-                colorsMatrix[row][col] = color;
+    colorful = !colorful;
+    if (colorful) {
+        for (let row=0;row<cell_states.length;row++) {
+            for (let col=0;col<cell_states[0].length;col++) {
+                if (cell_states[row][col][0]!=0) {
+                    let color = getRandomColor();
+                    color = color.map(x => (x/Math.max(...color))*255);
+                    colorsMatrix[row][col] = color;
+                }
             }
         }
     }
+    draw()
 }
 
-function expIncrement(inputVal,minv,maxv,exp) {
+function expDecrement(inputVal,minv,maxv) {
+    let exp = 2;
     if (inputVal<minv) {
         inputVal = minv;
     }else if(inputVal>maxv) {
@@ -539,47 +811,91 @@ function expIncrement(inputVal,minv,maxv,exp) {
     return outputVal
 }
 
-function inverseExpInc(outputVal,minv,maxv,exp) {
+function inverseExpDec(outputVal,minv,maxv) {
+    let exp = 2;
     if (outputVal<minv) {
         outputVal = minv;
     }else if(outputVal>maxv) {
         outputVal = maxv;
     }
-    let inputVal = (Math.pow((outputVal-minv)/(minv-maxv),1/exp)*(maxv-minv))+minv;
+    let inputVal = ((maxv-minv)*Math.pow((outputVal-minv)/(maxv-minv),1/exp))+minv;
     
     return inputVal
 }
 
 function calcZoomRatio(matSize) {
-    return (matSize/gameMatrix.length)
+    return (matSize/cell_states.length)
 }
 
-function roundedRectangle(x, y, width, height, rounded) {
+function roundedRectangle(context,x, y, width, height, rounded) {
     const radiansInCircle = 2 * Math.PI
     const halfRadians = (2 * Math.PI)/2
     const quarterRadians = (2 * Math.PI)/4  
     
-    // top left arc
-    ctx.arc(rounded + x, rounded + y, rounded, -quarterRadians, halfRadians, true)
-    
-    // line from top left to bottom left
-    ctx.lineTo(x, y + height - rounded)
-  
-    // bottom left arc  
-    ctx.arc(rounded + x, height - rounded + y, rounded, halfRadians, quarterRadians, true)  
-    
-    // line from bottom left to bottom right
-    ctx.lineTo(x + width - rounded, y + height)
-  
-    // bottom right arc
-    ctx.arc(x + width - rounded, y + height - rounded, rounded, quarterRadians, 0, true)  
-    
-    // line from bottom right to top right
-    ctx.lineTo(x + width, y + rounded)  
-  
-    // top right arc
-    ctx.arc(x + width - rounded, y + rounded, rounded, 0, -quarterRadians, true)  
-    
-    // line from top right to top left
-    ctx.lineTo(x + rounded, y)  
+    context.arc(rounded + x, rounded + y, rounded, -quarterRadians, halfRadians, true)  // top left arc
+    context.lineTo(x, y + height - rounded)  // line from top left to bottom left
+    context.arc(rounded + x, height - rounded + y, rounded, halfRadians, quarterRadians, true)  // bottom left arc  
+    context.lineTo(x + width - rounded, y + height)  // line from bottom left to bottom right
+    context.arc(x + width - rounded, y + height - rounded, rounded, quarterRadians, 0, true)  // bottom right arc
+    context.lineTo(x + width, y + rounded)  // line from bottom right to top right
+    context.arc(x + width - rounded, y + rounded, rounded, 0, -quarterRadians, true)  // top right arc
+    context.lineTo(x + rounded, y)  // line from top right to top left
+}
+
+function makeCellAlive(row,col) {
+    ones_zeros = [-1,0,1];
+    let state = cell_states[row][col];
+    let alive = state[0];
+    if (alive=='1') {return}
+
+    cell_states[row][col] = '1'+cell_states[row][col][1]+cell_states[row][col][2];
+
+    for (let i=0;i<3;i++) {
+        for (let j=0;j<3;j++) {
+            let row_offset = ones_zeros[i];
+            let col_offset = ones_zeros[j];
+            nIdx = [row+row_offset,col+col_offset];   //index of neighboring cell
+            if (nIdx[0]<0 || nIdx[1]<0 || nIdx[0]>=cell_states.length || nIdx[1]>=cell_states[0].length) {continue}
+            nbor_state = cell_states[nIdx[0]][nIdx[1]];
+            if (!(row_offset==0 && col_offset==0)) {    //if this is actually a neighboring cell and not the original cell
+                cell_states[nIdx[0]][nIdx[1]] = nbor_state[0]+(parseInt(nbor_state[1])+1)+nbor_state[2];
+            }
+        }
+    }
+}
+
+function makeCellDead(row,col) {
+    ones_zeros = [-1,0,1];
+    let state = cell_states[row][col];
+    let alive = state[0];
+    if (alive=='0') {return}
+
+    cell_states[row][col] = '0'+cell_states[row][col][1]+cell_states[row][col][2];
+
+    for (let i=0;i<3;i++) {
+        for (let j=0;j<3;j++) {
+            let row_offset = ones_zeros[i];
+            let col_offset = ones_zeros[j];
+            nIdx = [row+row_offset,col+col_offset];   //index of neighboring cell
+            if (nIdx[0]<0 || nIdx[1]<0 || nIdx[0]>=cell_states.length || nIdx[1]>=cell_states[0].length) {continue}
+            nbor_state = cell_states[nIdx[0]][nIdx[1]];
+            if (!(row_offset==0 && col_offset==0)) {    //if this is actually a neighboring cell and not the original cell
+                cell_states[nIdx[0]][nIdx[1]] = nbor_state[0]+(parseInt(nbor_state[1])-1)+nbor_state[2];
+            }
+        }
+    }
+}
+
+let lastCalledTime;
+
+function requestAnimFrame() {
+
+  if(!lastCalledTime) {
+     lastCalledTime = Date.now();
+     fps = 0;
+     return;
+  }
+  delta = (Date.now() - lastCalledTime)/1000;
+  lastCalledTime = Date.now();
+  console.log(1/delta)
 }
