@@ -571,11 +571,25 @@ function gameLoop() {
 function draw() {
     zoom();
     let game_view_range = gameMatViewCoords();
+    let start_pos = [0,0];
+    let draw_size = [canvas.width, canvas.height];
+    if (gameRect.x>0) {
+        start_pos[0] = gameRect.x;
+    }
+    if (gameRect.y>0) {
+        start_pos[1] = gameRect.y;
+    }
+    if (gameRect.width<canvas.width) {
+        draw_size[0] = gameRect.width;
+    }
+    if (gameRect.height<canvas.height) {
+        draw_size[1] = gameRect.height;
+    }
 
     //background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = bg_color;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(start_pos[0], start_pos[1], draw_size[0], draw_size[1]);
 
     drawGrid(game_view_range);
     drawCellsAndSelect(game_view_range);
