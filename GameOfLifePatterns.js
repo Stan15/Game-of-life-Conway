@@ -73,7 +73,7 @@ let x_pattern = {
 
 let pulsar = {
     name: 'Pulsar',
-    space_needed: [17,17],
+    space_needed: [15,17],
     start_pattern: [[0,0,0,1,1,1,0,0,0,1,1,1,0,0,0],
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                     [0,1,0,0,0,0,1,0,1,0,0,0,0,1,0],
