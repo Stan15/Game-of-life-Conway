@@ -64,10 +64,30 @@ for (let i=0;i<x_pattern_mat.length;i++) {
     x_pattern_mat[i][x_pattern_mat[0].length-1-i] = 1;
 }
 let x_pattern = {
-    name: 'X-shaped',
+    name: 'X-shaped explosion',
     space_needed: [11,11],
     start_pattern: x_pattern_mat,
     selected: false,
+    y_coord: 0,
+}
+
+let pulsar = {
+    name: 'Pulsar',
+    space_needed: [17,17],
+    start_pattern: [[0,0,0,1,1,1,0,0,0,1,1,1,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,1,0,0,0,0,1,0,1,0,0,0,0,1,0],
+                    [0,1,0,0,0,0,1,0,1,0,0,0,0,1,0],
+                    [0,1,0,0,0,0,1,0,1,0,0,0,0,1,0],
+                    [0,0,0,1,1,1,0,0,0,1,1,1,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,1,1,1,0,0,0,1,1,1,0,0,0],
+                    [0,1,0,0,0,0,1,0,1,0,0,0,0,1,0],
+                    [0,1,0,0,0,0,1,0,1,0,0,0,0,1,0],
+                    [0,1,0,0,0,0,1,0,1,0,0,0,0,1,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,1,1,1,0,0,0,1,1,1,0,0,0]],
+    selected:false,
     y_coord: 0,
 }
 
@@ -103,4 +123,4 @@ let PufferTrain = {
     y_coord: 0,
 }
 
-var GameOfLifePresetPatterns = [gosperGliderGun,PufferTrain,lightweight_spaceship,glider,small_explosion,x_pattern];
+var GameOfLifePresetPatterns = [gosperGliderGun,PufferTrain,pulsar,lightweight_spaceship,glider,small_explosion,x_pattern];
