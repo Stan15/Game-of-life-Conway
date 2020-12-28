@@ -259,6 +259,7 @@ let pan_pivot_vector;
 
 stopHand();
 function stopHand() {
+    canvas.style.cursor = "grab";
     panning = false;
     painting = false;
     erasing = false;
@@ -277,6 +278,7 @@ canvas.onclick = placePattern;
 
 canvas.onmousedown = startHand;
 function startHand() {
+    canvas.style.cursor = "grabbing";
     let hand_control = document.querySelector('input[name="hand"]:checked').value;
     if (hand_control == "pan") {
         panning = true;
