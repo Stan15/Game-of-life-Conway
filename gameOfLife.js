@@ -257,13 +257,20 @@ let erasing;
 
 let pan_pivot_vector;
 
+let mouseMoving = false;
+let previousMousePos = null;
+
 stopHand();
 function stopHand() {
-    canvas.style.cursor = "grab";
+    if (panning) {
+        canvas.style.cursor = "grab";
+    }
     panning = false;
     painting = false;
     erasing = false;
     touching = false;
+    mouseMoving = false;
+    previousMousePos = null;
 }
 
 function startTouching() {touching = true;}
@@ -274,13 +281,24 @@ canvas.ontouchcancel = stopHand;
 canvas.onmouseup = stopHand;
 canvas.onmouseleave = stopHand;
 
-canvas.onclick = placePattern;
+canvas.onmouseover = updateCursor;
 
+function updateCursor() {
+    let hand_control = document.querySelector('input[name="hand"]:checked').value;
+    if (hand_control!="pan") {
+        canvas.style.cursor = "crosshair";
+    }else {
+        canvas.style.cursor = "grab";
+    }
+}
+
+canvas.onclick = placePattern;
 canvas.onmousedown = startHand;
 function startHand() {
-    canvas.style.cursor = "grabbing";
+    mouseMoving = true;
     let hand_control = document.querySelector('input[name="hand"]:checked').value;
     if (hand_control == "pan") {
+        canvas.style.cursor = "grabbing";
         panning = true;
         setPanPivot(event);
     }else if (hand_control == "paint") {
@@ -288,6 +306,7 @@ function startHand() {
     }else if (hand_control == "erase") {
         erasing = true;
     }
+    previousMousePos = null;
     performHandControl(event);
 }
 
@@ -306,21 +325,28 @@ function performHandControl(event) {
             y_coord = coords[1];
             let row, col;
             [row,col] = canvasCoords2matIdx(x_coord,y_coord);
+
             if (selectingPattern.patternSelected) {
                 selectAnimation(row,col);
                 break
             }else if (painting) {
-                paintCell(row,col);
+                paintCell(row, col);
             }else if (erasing) {
-                eraseCell(row,col);
+                // erase(x_coord, y_coord, previousMousePos);
+                eraseCell(row, col);
             }else if (panning) {
                 panGame(x_coord,y_coord);
             }
+        }
+
+        if (mouseMoving) {
+            previousMousePos = [x_coord, y_coord];
         }
         
         let coords = touchPoint2CanvasCoords(event,touches[0]); //set touch coordinate in case you are panning
         x_coord = coords[0];
         y_coord = coords[1];
+
     }else {
         let coords = mousePoint2CanvasCoords(event);
         x_coord = coords[0];
@@ -331,11 +357,17 @@ function performHandControl(event) {
         if (selectingPattern.patternSelected) {
             selectAnimation(row,col);
         }else if (painting) {
-            paintCell(row,col);
+            paintCell(row, col);
         }else if (erasing) {
-            eraseCell(row,col);
+            // erase(x_coord, y_coord, previousMousePos);
+            eraseCell(row, col);
         }else if (panning) {
             panGame(x_coord,y_coord);
+        }
+
+        
+        if (mouseMoving) {
+            previousMousePos = [x_coord, y_coord];
         }
     }
 }
@@ -417,6 +449,28 @@ function panToCenter() {
 }
 
 //----------------------Painting Cells-------------------
+// function paint(x_coord, y_coord, previousMousePos) {
+//     if (previousMousePos==null) {
+//         paintCell(...canvasCoords2matIdx(x_coord,y_coord));
+//         return;
+//     }
+//     console.log([previousMousePos[0]-x_coord, previousMousePos[1]-y_coord]);
+
+//     let mat_view = gameMatViewCoords();
+//     let canvas2matScale = [cell_states[0].length/gameRect.width,cell_states.length/gameRect.height];
+//     let gradient = (previousMousePos[1]-y_coord)/(previousMousePos[0]-x_coord);
+//     let intercept = y_coord - (gradient*x_coord);
+
+//     let current_y_coord = previousMousePos[1];
+//     let current_x_coord = previousMousePos[0];
+//     while (current_y_coord<=y_coord && current_x_coord<=x_coord) {
+//         paintCell(...canvasCoords2matIdx(current_x_coord,current_y_coord));
+//         current_x_coord += 0.5*(1/canvas2matScale[1]);
+//         current_y_coord = (gradient*current_x_coord) + intercept;
+//     }
+//     paintCell(...canvasCoords2matIdx(x_coord,y_coord));
+// }
+
 function paintCell(row,col) {
     if (row>=cell_states.length) {
         row = cell_states.length-1;
@@ -437,6 +491,27 @@ function paintCell(row,col) {
 }
 
 //-------------------------Erasing Cells----------------
+// function erase(x_coord, y_coord, previousMousePos) {
+//     if (previousMousePos==null) {
+//         eraseCell(...canvasCoords2matIdx(x_coord,y_coord));
+//         return;
+//     }
+
+//     let mat_view = gameMatViewCoords();
+//     let canvas2matScale = [cell_states[0].length/gameRect.width,cell_states.length/gameRect.height];
+//     let gradient = (previousMousePos[1]-y_coord)/(previousMousePos[0]-x_coord);
+//     let intercept = y_coord - (gradient*x_coord);
+
+//     let current_y_coord = previousMousePos[1];
+//     let current_x_coord = previousMousePos[0];
+//     while (current_y_coord<=y_coord && current_x_coord<=x_coord) {
+//         eraseCell(...canvasCoords2matIdx(current_x_coord,current_y_coord));
+//         current_x_coord += 0.5*canvas2matScale[0];
+//         current_y_coord = (gradient*current_x_coord) + intercept;
+//     }
+//     eraseCell(...canvasCoords2matIdx(x_coord,y_coord));
+// }
+
 function eraseCell(row,col) {
     if (row>=cell_states.length) {
         row = cell_states.length-1;
