@@ -6,6 +6,8 @@ The core game is built simply on the following 4 rules:
 3. Any live cell with more than three live neighbours dies, as if by overpopulation.
 4. Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
 
+Play the game at this website: https://stan15.github.io/Game-of-life-Conway/
+
 # Preset patterns
 Some famous patterns discovered by others who have studied the game, are built into the game and can be placed anywhere on the playground. A few others which I discovered to be interesting are also included. These paterns can also be rotated using the rotate button, allowing the user to place these patterns in any orientation they desire.
 
