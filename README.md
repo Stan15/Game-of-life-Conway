@@ -14,7 +14,7 @@ Some famous patterns discovered by others who have studied the game, are built i
 # Running the game
 The game can be run using the "Run" button, or the "Step" button can be used to step through a single "generation" of the simulation. Changes to the playground can be made while the game is running, by maybe adding a preset pattern. The playground can be cleared at any point in time.
 
-![Alt Text](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
+![Running the game](https://user-images.githubusercontent.com/47716543/103318610-fb33e300-49fc-11eb-84c6-5fed08f3b201.gif)
 
 # Controls
 The user can pan around to see other areas of the playground by dragging the screen. There is a slider which controls the zoom level, allowing you to see more of the playground, as well as another which controls the speed at which the game runs. 
