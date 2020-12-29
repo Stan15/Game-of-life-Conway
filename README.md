@@ -9,7 +9,7 @@ The core game is built simply on the following 4 rules:
 # Preset patterns
 Some famous patterns discovered by others who have studied the game, are built into the game and can be placed anywhere on the playground. A few others which I discovered to be interesting are also included. These paterns can also be rotated using the rotate button, allowing the user to place these patterns in any orientation they desire.
 
-![Alt Text](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
+![Preset Patterns](https://user-images.githubusercontent.com/47716543/103318343-2c5fe380-49fc-11eb-9171-9a47513d7524.gif)
 
 # Running the game
 The game can be run using the "Run" button, or the "Step" button can be used to step through a single "generation" of the simulation. Changes to the playground can be made while the game is running, by maybe adding a preset pattern. The playground can be cleared at any point in time.
