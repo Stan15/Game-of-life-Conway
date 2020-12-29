@@ -17,9 +17,9 @@ The game can be run using the "Run" button, or the "Step" button can be used to 
 ![Running the game](https://user-images.githubusercontent.com/47716543/103318610-fb33e300-49fc-11eb-84c6-5fed08f3b201.gif)
 
 # Controls
-The user can pan around to see other areas of the playground by dragging the screen. There is a slider which controls the zoom level, allowing you to see more of the playground, as well as another which controls the speed at which the game runs. 
+The user can pan around to see other areas of the playground by dragging the screen. There is a slider which controls the zoom level, allowing you to see more of the playground, as well as another which controls the speed at which the game runs.
 
-![Alt Text](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
+![Controls](https://user-images.githubusercontent.com/47716543/103318833-9a58da80-49fd-11eb-982b-58bf2829f48f.gif)
 
 # Painting
 The user can make their own patterns using the "paint" and "erase" features. There is also a "rainbow" button which assigns each live cell a color. On every iteration, a cell's color changes to a color which is the average of its color and that of its immediate neighboring cells. There is a 1 in 1000 chance that a cell's color does not change to the average after an iteration, but rather, takes on a new, random color.
