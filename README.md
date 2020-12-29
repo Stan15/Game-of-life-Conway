@@ -24,4 +24,4 @@ The user can pan around to see other areas of the playground by dragging the scr
 # Painting
 The user can make their own patterns using the "paint" and "erase" features. There is also a "rainbow" button which assigns each live cell a color. On every iteration, a cell's color changes to a color which is the average of its color and that of its immediate neighboring cells. There is a 1 in 1000 chance that a cell's color does not change to the average after an iteration, but rather, takes on a new, random color.
 
-![Alt Text](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
+![Painting](https://user-images.githubusercontent.com/47716543/103319163-ce80cb00-49fe-11eb-83b8-c3e8e06fe669.gif)
