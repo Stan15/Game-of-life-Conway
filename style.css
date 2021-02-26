@@ -48,6 +48,7 @@ body {
 }
 
 #presetPatternCanvas {
+    cursor: pointer;
     border-radius: 0.5em;
 }
 
